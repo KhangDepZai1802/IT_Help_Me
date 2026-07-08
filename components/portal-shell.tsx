@@ -33,7 +33,9 @@ import { initialDepartments, initialRequests, initialStaff } from "@/lib/sample-
 import type { Department, ITRequest, ITStaff, Priority, Rating, RequestStatus, Role } from "@/lib/types";
 
 const STORAGE_KEY = "it-help-me-state-v1";
+const LEGACY_IMPORT_KEY = "it-help-me-legacy-imported-v1";
 const IT_LOGIN_PASSWORD = "123456";
+const SEED_REQUEST_IDS = new Set(["REQ-260707-001", "REQ-260707-002", "REQ-260706-014", "REQ-260705-009"]);
 
 type LoginSession = {
   role: Role;
@@ -85,10 +87,42 @@ function isToday(value: string) {
   );
 }
 
+function isClosedStatus(status: RequestStatus) {
+  return status === "DONE" || status === "REJECTED";
+}
+
+function removeClosedSeedRequests(requests: ITRequest[]) {
+  return requests.filter((request) => !(SEED_REQUEST_IDS.has(request.id) && isClosedStatus(request.status)));
+}
+
 type SelectOption<T extends string> = {
   value: T;
   label: string;
 };
+
+type AppState = {
+  departments: Department[];
+  staff: ITStaff[];
+  requests: ITRequest[];
+  activeDepartmentId: string;
+};
+
+async function apiRequest<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...init?.headers
+    }
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error || "Không thể kết nối database.");
+  }
+
+  return response.json() as Promise<T>;
+}
 
 function formatMonthLabel(value: string) {
   const [year, month] = value.split("-").map(Number);
@@ -114,6 +148,7 @@ export function PortalShell() {
   const [departmentFilter, setDepartmentFilter] = useState<string>("ALL");
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey());
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   const [requesterName, setRequesterName] = useState("");
   const [newRequestDepartmentId, setNewRequestDepartmentId] = useState(initialDepartments[0].id);
@@ -130,43 +165,108 @@ export function PortalShell() {
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
 
   useEffect(() => {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) {
+    let ignore = false;
+
+    async function loadState() {
       try {
-        const parsed = JSON.parse(raw) as {
-          departments: Department[];
-          staff: ITStaff[];
-          requests: ITRequest[];
-          activeDepartmentId: string;
-        };
-        setDepartments(parsed.departments);
-        setStaff(parsed.staff);
-        setRequests(parsed.requests);
-        setActiveDepartmentId(parsed.activeDepartmentId);
-        setLoginDepartmentId(parsed.activeDepartmentId);
-        setNewRequestDepartmentId(parsed.activeDepartmentId);
-        setSelectedRequestId(parsed.requests[0]?.id ?? "");
-      } catch {
-        window.localStorage.removeItem(STORAGE_KEY);
+        const state = await apiRequest<AppState>("/api/state");
+        if (ignore) return;
+
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        const shouldImportLegacy = raw && !window.localStorage.getItem(LEGACY_IMPORT_KEY);
+
+        if (shouldImportLegacy) {
+          const parsed = JSON.parse(raw) as AppState;
+          const legacyState: AppState = {
+            departments: parsed.departments?.length ? parsed.departments : state.departments,
+            staff: parsed.staff?.length ? parsed.staff : state.staff,
+            requests: removeClosedSeedRequests(parsed.requests ?? state.requests),
+            activeDepartmentId: parsed.activeDepartmentId || state.activeDepartmentId
+          };
+
+          const importedState = await apiRequest<AppState>("/api/import-state", {
+            method: "POST",
+            body: JSON.stringify(legacyState)
+          });
+
+          window.localStorage.setItem(LEGACY_IMPORT_KEY, "true");
+          applyState(importedState);
+        } else {
+          applyState(state);
+        }
+      } catch (error) {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw) as AppState;
+            applyState({
+              departments: parsed.departments?.length ? parsed.departments : initialDepartments,
+              staff: parsed.staff?.length ? parsed.staff : initialStaff,
+              requests: removeClosedSeedRequests(parsed.requests ?? initialRequests),
+              activeDepartmentId: parsed.activeDepartmentId || initialDepartments[0].id
+            });
+          } catch {
+            window.localStorage.removeItem(STORAGE_KEY);
+          }
+        }
+
+        setLoadError(error instanceof Error ? error.message : "Không thể tải dữ liệu từ database.");
+      } finally {
+        if (!ignore) setHasLoaded(true);
       }
     }
-    setHasLoaded(true);
+
+    function applyState(state: AppState) {
+      const nextDepartments = state.departments?.length ? state.departments : initialDepartments;
+      const nextStaff = state.staff?.length ? state.staff : initialStaff;
+      const nextRequests = removeClosedSeedRequests(state.requests ?? initialRequests);
+      const nextActiveDepartmentId = state.activeDepartmentId || nextDepartments[0]?.id || initialDepartments[0].id;
+
+      setDepartments(nextDepartments);
+      setStaff(nextStaff);
+      setRequests(nextRequests);
+      setActiveDepartmentId(nextActiveDepartmentId);
+      setLoginDepartmentId(nextActiveDepartmentId);
+      setNewRequestDepartmentId(nextActiveDepartmentId);
+      setSelectedRequestId(nextRequests.find((request) => !isClosedStatus(request.status))?.id ?? "");
+      setLoadError("");
+    }
+
+    loadState();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   useEffect(() => {
     if (!hasLoaded) return;
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ departments, staff, requests, activeDepartmentId })
-    );
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ departments, staff, requests, activeDepartmentId }));
   }, [activeDepartmentId, departments, hasLoaded, requests, staff]);
+
+  async function refreshState() {
+    const state = await apiRequest<AppState>("/api/state");
+    const nextDepartments = state.departments?.length ? state.departments : initialDepartments;
+    const nextStaff = state.staff?.length ? state.staff : initialStaff;
+    const nextRequests = removeClosedSeedRequests(state.requests ?? initialRequests);
+    const nextActiveDepartmentId = state.activeDepartmentId || nextDepartments[0]?.id || initialDepartments[0].id;
+
+    setDepartments(nextDepartments);
+    setStaff(nextStaff);
+    setRequests(nextRequests);
+    setActiveDepartmentId(nextActiveDepartmentId);
+    setLoginDepartmentId(nextActiveDepartmentId);
+    setNewRequestDepartmentId(nextActiveDepartmentId);
+    setSelectedRequestId(nextRequests.find((request) => !isClosedStatus(request.status))?.id ?? "");
+    setLoadError("");
+  }
 
   const departmentName = (id: string) => departments.find((department) => department.id === id)?.name ?? "Không rõ";
   const staffName = (id: string | null) => staff.find((member) => member.id === id)?.fullName ?? "Chưa gán";
 
   function pickFirstVisibleRequestId(nextRole: Role, departmentId: string) {
     return (
-      requests.find((request) => request.status !== "DONE" && (nextRole === "IT" || request.departmentId === departmentId))?.id ??
+      requests.find((request) => !isClosedStatus(request.status) && (nextRole === "IT" || request.departmentId === departmentId))?.id ??
       ""
     );
   }
@@ -229,7 +329,7 @@ export function PortalShell() {
   const todayPendingRequests = useMemo(() => {
     return requests
       .filter((request) => (role === "IT" ? true : request.departmentId === activeDepartmentId))
-      .filter((request) => request.status !== "DONE" && request.status !== "REJECTED")
+      .filter((request) => !isClosedStatus(request.status))
       .filter((request) => isToday(request.createdAt))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 6);
@@ -238,7 +338,7 @@ export function PortalShell() {
   const filteredRequests = useMemo(() => {
     return requests
       .filter((request) => (role === "IT" ? true : request.departmentId === activeDepartmentId))
-      .filter((request) => request.status !== "DONE" && request.status !== "REJECTED")
+      .filter((request) => !isClosedStatus(request.status))
       .filter((request) => (statusFilter === "ALL" ? true : request.status === statusFilter))
       .filter((request) => (departmentFilter === "ALL" || role !== "IT" ? true : request.departmentId === departmentFilter))
       .filter((request) => {
@@ -268,7 +368,7 @@ export function PortalShell() {
   }, [activeDepartmentId, requests, role, selectedMonth]);
 
   const statusStats = useMemo(() => {
-    return (["NEW", "IN_PROGRESS", "DONE", "REJECTED"] as RequestStatus[]).map((status) => ({
+    return (Object.keys(statusLabels) as RequestStatus[]).map((status) => ({
       status,
       count: requestsForMonth.filter((request) => request.status === status).length
     }));
@@ -287,11 +387,11 @@ export function PortalShell() {
 
   const historyRequestsForMonth = useMemo(() => {
     return requestsForMonth
-      .filter((request) => request.status === "DONE" || request.status === "REJECTED")
+      .filter((request) => isClosedStatus(request.status))
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [requestsForMonth]);
 
-  function handleCreateRequest(event: FormEvent<HTMLFormElement>) {
+  async function handleCreateRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!requesterName.trim() || !newContent.trim()) return;
 
@@ -322,107 +422,138 @@ export function PortalShell() {
       ]
     };
 
-    setRequests((current) => [request, ...current]);
-    setSelectedRequestId(id);
-    setRequesterName("");
-    setNewContent("");
-    setNewPriority("MEDIUM");
-    setAttachmentName("");
+    try {
+      const created = await apiRequest<ITRequest>("/api/requests", {
+        method: "POST",
+        body: JSON.stringify(request)
+      });
+
+      setRequests((current) => [created, ...current.filter((item) => item.id !== created.id)]);
+      setSelectedRequestId(created.id);
+      setRequesterName("");
+      setNewContent("");
+      setNewPriority("MEDIUM");
+      setAttachmentName("");
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Không thể tạo yêu cầu.");
+    }
   }
 
-  function handleUpdateRequest() {
+  async function handleUpdateRequest() {
     if (!selectedRequest) return;
     if ((draftStatus === "DONE" || draftStatus === "REJECTED") && !draftNote.trim()) {
       window.alert("Cần nhập ghi chú kết quả hoặc lý do trước khi đóng yêu cầu.");
       return;
     }
 
-    const changedAt = new Date().toISOString();
-    setRequests((current) =>
-      current.map((request) => {
-        if (request.id !== selectedRequest.id) return request;
-
-        const statusChanged = request.status !== draftStatus;
-        return {
-          ...request,
+    try {
+      const updated = await apiRequest<ITRequest>(`/api/requests/${selectedRequest.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
           status: draftStatus,
           assignedToId: draftAssignedToId || null,
-          resolutionNote: draftNote.trim(),
-          updatedAt: changedAt,
-          history: statusChanged
-            ? [
-                {
-                  id: `${request.id}-history-${changedAt}`,
-                  requestId: request.id,
-                  oldStatus: request.status,
-                  newStatus: draftStatus,
-                  changedById: draftAssignedToId || null,
-                  note: draftNote.trim() || "Cập nhật trạng thái",
-                  changedAt
-                },
-                ...request.history
-              ]
-            : request.history
-        };
-      })
-    );
+          resolutionNote: draftNote.trim()
+        })
+      });
+
+      setRequests((current) => current.map((request) => (request.id === updated.id ? updated : request)));
+      if (isClosedStatus(updated.status)) {
+        const nextRequest = requests.find(
+          (item) => item.id !== updated.id && !isClosedStatus(item.status) && (role === "IT" || item.departmentId === activeDepartmentId)
+        );
+        setSelectedRequestId(nextRequest?.id ?? "");
+      }
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Không thể cập nhật yêu cầu.");
+    }
   }
 
-  function handleAddDepartment() {
+  async function handleAddDepartment() {
     const name = newDepartmentName.trim();
     if (!name) return;
     const department = { id: `dept-${Date.now()}`, name, isActive: true };
-    setDepartments((current) => [...current, department]);
-    setNewDepartmentName("");
+
+    try {
+      const created = await apiRequest<Department>("/api/departments", {
+        method: "POST",
+        body: JSON.stringify(department)
+      });
+      setDepartments((current) => [...current, created]);
+      setNewDepartmentName("");
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Không thể thêm phòng ban.");
+    }
   }
 
-  function handleAddStaff() {
+  async function handleAddStaff() {
     const fullName = newStaffName.trim();
     if (!fullName) return;
-    setStaff((current) => [...current, { id: `it-${Date.now()}`, fullName, isActive: true }]);
-    setNewStaffName("");
+    const member = { id: `it-${Date.now()}`, fullName, isActive: true };
+
+    try {
+      const created = await apiRequest<ITStaff>("/api/staff", {
+        method: "POST",
+        body: JSON.stringify(member)
+      });
+      setStaff((current) => [...current, created]);
+      setNewStaffName("");
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Không thể thêm nhân viên IT.");
+    }
   }
 
-  function handleDeleteStaff(staffId: string) {
+  async function handleDeleteStaff(staffId: string) {
     const member = staff.find((item) => item.id === staffId);
     if (!member) return;
     const shouldDelete = window.confirm(`Xóa ${member.fullName} khỏi danh sách nhân viên IT?`);
     if (!shouldDelete) return;
 
-    setStaff((current) => current.filter((item) => item.id !== staffId));
-    setRequests((current) =>
-      current.map((request) => (request.assignedToId === staffId ? { ...request, assignedToId: null } : request))
-    );
-    if (draftAssignedToId === staffId) setDraftAssignedToId("");
+    try {
+      await apiRequest<{ ok: boolean }>(`/api/staff/${staffId}`, { method: "DELETE" });
+      setStaff((current) => current.filter((item) => item.id !== staffId));
+      setRequests((current) =>
+        current.map((request) => (request.assignedToId === staffId ? { ...request, assignedToId: null } : request))
+      );
+      if (draftAssignedToId === staffId) setDraftAssignedToId("");
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Không thể xóa nhân viên IT.");
+    }
   }
 
-  function handleDeleteRequest(requestId: string) {
+  async function handleDeleteRequest(requestId: string) {
     const request = requests.find((item) => item.id === requestId);
     if (!request) return;
 
     const shouldDelete = window.confirm(`Bạn có chắc muốn xóa phiếu ${request.id} của ${request.requesterName}?`);
     if (!shouldDelete) return;
 
-    setRequests((current) => {
-      const remaining = current.filter((item) => item.id !== requestId);
-      if (selectedRequestId === requestId) {
-        const nextRequest = remaining.find(
-          (item) => item.status !== "DONE" && item.status !== "REJECTED" && (role === "IT" || item.departmentId === activeDepartmentId)
-        );
-        setSelectedRequestId(nextRequest?.id ?? "");
-      }
-      return remaining;
-    });
+    try {
+      await apiRequest<{ ok: boolean }>(`/api/requests/${requestId}`, { method: "DELETE" });
+      setRequests((current) => {
+        const remaining = current.filter((item) => item.id !== requestId);
+        if (selectedRequestId === requestId) {
+          const nextRequest = remaining.find(
+            (item) => !isClosedStatus(item.status) && (role === "IT" || item.departmentId === activeDepartmentId)
+          );
+          setSelectedRequestId(nextRequest?.id ?? "");
+        }
+        return remaining;
+      });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Không thể xóa yêu cầu.");
+    }
   }
 
-  function handleRateRequest(requestId: string, rating: Rating) {
-    setRequests((current) =>
-      current.map((request) =>
-        request.id === requestId && request.status === "DONE" && !request.rating
-          ? { ...request, rating, updatedAt: new Date().toISOString() }
-          : request
-      )
-    );
+  async function handleRateRequest(requestId: string, rating: Rating) {
+    try {
+      const updated = await apiRequest<ITRequest>(`/api/requests/${requestId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ rating })
+      });
+      setRequests((current) => current.map((request) => (request.id === updated.id ? updated : request)));
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Không thể lưu đánh giá.");
+    }
   }
 
   function exportCsv() {

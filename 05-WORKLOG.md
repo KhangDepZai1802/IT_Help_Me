@@ -31,15 +31,15 @@
 
 1. Đã khởi tạo Next.js App Router + TypeScript + Tailwind CSS cho MVP `IT Help Me!`.
 2. Giao diện dashboard hiện tập trung vào các card nghiệp vụ chính: gửi yêu cầu, Tickets, xử lý IT, thống kê, danh mục và lịch sử.
-3. App hiện chạy với dữ liệu mẫu/localStorage: phòng ban gửi yêu cầu; IT xem/lọc/assign/cập nhật/xóa ticket; lịch sử lưu yêu cầu hoàn thành/từ chối theo tháng; phòng ban đánh giá sao một lần cho yêu cầu hoàn thành.
+3. App hiện chạy với dữ liệu mẫu/localStorage: phòng ban gửi yêu cầu; IT xem/lọc/assign/cập nhật/xóa ticket với trạng thái `Mới gửi` -> `Đã tiếp nhận` -> `Đang xử lý` -> `Hoàn thành`/`Từ chối`; lịch sử lưu yêu cầu hoàn thành/từ chối theo tháng; phòng ban đánh giá sao một lần cho yêu cầu hoàn thành.
 4. Đã tách cổng đăng nhập demo cho 2 loại tài khoản: phòng ban thường chỉ vào giao diện phòng ban đã chọn; phòng IT cần mật khẩu `123456` và có thể xem cả giao diện IT lẫn phòng ban.
-5. Đã thêm `prisma/schema.prisma` theo thiết kế PostgreSQL/Supabase trong tài liệu, nhưng chưa kết nối DB thật vì chưa có `DATABASE_URL` Supabase.
+5. Đã thêm `prisma/schema.prisma` theo thiết kế PostgreSQL/Supabase trong tài liệu, enum `RequestStatus` đã có `ACCEPTED`, nhưng chưa kết nối DB thật vì chưa có `DATABASE_URL` Supabase/Vercel DB.
 6. Đã deploy production lên Vercel: `https://it-help-me.vercel.app` (deployment mới nhất: `https://it-help-boc1ylbsa-thongdat.vercel.app`).
 
 ## VIỆC TIẾP THEO
 
-1. Tạo Supabase project, điền `DATABASE_URL` vào `.env.local`, chạy Prisma migration đầu tiên.
-2. Thay dữ liệu mẫu/localStorage bằng API routes/server actions dùng Prisma.
+1. Tạo Supabase/Vercel Postgres project hoặc cung cấp DB production hiện tại, điền/pull `DATABASE_URL` vào `.env.local`, chạy Prisma migration đầu tiên.
+2. Thay dữ liệu mẫu/localStorage bằng API routes/server actions dùng Prisma; sau đó mới đồng bộ được dữ liệu production về local bằng DB dump/seed thật.
 3. Làm auth/session thật cho 2 role: tài khoản phòng ban và tài khoản IT; thay mật khẩu demo hard-code bằng auth thật.
 4. Kết nối Supabase Storage cho file đính kèm.
 5. Xuất Excel server-side bằng `exceljs` hoặc `xlsx` nếu cần file `.xlsx` chuẩn thay vì CSV.
@@ -47,11 +47,17 @@
 
 ## BLOCKERS
 
-- Chưa có Supabase `DATABASE_URL` và storage keys nên chưa thể migrate/kết nối DB thật.
+- Chưa có Supabase/Vercel DB `DATABASE_URL`, storage keys hoặc Vercel CLI/token local nên chưa thể migrate/kết nối/pull DB thật. App hiện vẫn lưu dữ liệu trong localStorage của từng trình duyệt; dữ liệu localStorage trên production không thể đồng bộ xuống repo/local như database server.
 
 ---
 
 ## NHẬT KÝ SESSION
+
+### [2026-07-08] Session 6 - Codex
+- **Làm được:** Thêm trạng thái `Đã tiếp nhận` vào luồng xử lý giữa `Mới gửi` và `Đang xử lý`; cập nhật type/label/tone/thống kê/dropdown xử lý và enum Prisma. Xóa các ticket seed đã hoàn thành/từ chối khỏi dữ liệu mẫu lịch sử; thêm migration localStorage để loại bỏ các ticket seed đã bị đóng nhưng vẫn giữ dữ liệu thật và danh sách nhân viên IT đã lưu trên trình duyệt hiện tại.
+- **File thay đổi chính:** `components/portal-shell.tsx`, `lib/types.ts`, `lib/constants.ts`, `lib/sample-data.ts`, `prisma/schema.prisma`, `05-WORKLOG.md`.
+- **Đã test:** `npm.cmd run build` thành công; `http://localhost:3000` trả `200 OK`.
+- **Lưu ý/cảnh báo cho người sau:** Chưa thể đồng bộ DB Vercel xuống localhost vì project chưa có DB server/API/runtime env trong repo; hiện dữ liệu production nếu có là localStorage theo trình duyệt. Cần nối DB thật trước khi làm pull/push dữ liệu production/local an toàn.
 
 ### [2026-07-08] Session 5 - Codex
 - **Làm được:** Tách cổng đăng nhập theo tài khoản phòng ban/IT; thêm mật khẩu demo cho IT (`123456`); khóa phòng ban thường chỉ xem đúng giao diện/phòng ban; IT xem được cả hai giao diện. Cập nhật Tickets để ẩn yêu cầu hoàn thành/từ chối sang Lịch sử; thêm xóa ticket cho IT có xác nhận; thêm bảng Lịch sử theo tháng cho yêu cầu hoàn thành/từ chối; phòng ban đánh giá sao 1 lần cho yêu cầu hoàn thành; ẩn Excel ở giao diện phòng ban; sửa dropdown tháng trong modal Lịch sử không bị che; deploy production lại lên Vercel.

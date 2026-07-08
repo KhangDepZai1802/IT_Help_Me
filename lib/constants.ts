@@ -9,6 +9,7 @@ export const priorityLabels: Record<Priority, string> = {
 
 export const statusLabels: Record<RequestStatus, string> = {
   NEW: "Mới gửi",
+  ACCEPTED: "Đã tiếp nhận",
   IN_PROGRESS: "Đang xử lý",
   DONE: "Hoàn thành",
   REJECTED: "Từ chối"
@@ -16,6 +17,7 @@ export const statusLabels: Record<RequestStatus, string> = {
 
 export const statusTone: Record<RequestStatus, string> = {
   NEW: "bg-amber-50 text-amber-700 ring-amber-200",
+  ACCEPTED: "bg-sky-50 text-sky-700 ring-sky-200",
   IN_PROGRESS: "bg-aqua/10 text-aqua ring-aqua/25",
   DONE: "bg-emerald-100 text-emerald-700 ring-emerald-200",
   REJECTED: "bg-rose-50 text-rose-700 ring-rose-200"

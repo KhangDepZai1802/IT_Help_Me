@@ -2,7 +2,7 @@ export type Role = "DEPARTMENT" | "IT";
 
 export type Priority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
-export type RequestStatus = "NEW" | "IN_PROGRESS" | "DONE" | "REJECTED";
+export type RequestStatus = "NEW" | "ACCEPTED" | "IN_PROGRESS" | "DONE" | "REJECTED";
 
 export type Rating = 1 | 2 | 3 | 4 | 5;
 

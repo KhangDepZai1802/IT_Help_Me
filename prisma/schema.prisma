@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum AccountRole {
@@ -21,6 +20,7 @@ enum Priority {
 
 enum RequestStatus {
   NEW
+  ACCEPTED
   IN_PROGRESS
   DONE
   REJECTED
@@ -65,6 +65,8 @@ model Request {
   assignedToId   String?
   assignedTo     ITStaff?               @relation("AssignedRequests", fields: [assignedToId], references: [id])
   resolutionNote String?
+  attachmentName String                 @default("")
+  rating         Int?
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
   attachments    RequestAttachment[]

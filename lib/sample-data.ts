@@ -47,7 +47,7 @@ export const initialRequests: ITRequest[] = [
     requesterName: "Quỳnh Chi",
     content: "Cần cấp tài khoản email công ty cho nhân sự mới onboard trong chiều nay.",
     priority: "URGENT",
-    status: "IN_PROGRESS",
+    status: "ACCEPTED",
     assignedToId: "it-minh",
     resolutionNote: "",
     attachmentName: "",
@@ -67,39 +67,11 @@ export const initialRequests: ITRequest[] = [
         id: "his-002b",
         requestId: "REQ-260707-002",
         oldStatus: "NEW",
-        newStatus: "IN_PROGRESS",
+        newStatus: "ACCEPTED",
         changedById: "it-minh",
-        note: "Đã nhận xử lý",
+        note: "Đã tiếp nhận",
         changedAt: new Date(now.getTime() - 90 * 60 * 1000).toISOString()
       }
     ]
-  },
-  {
-    id: "REQ-260706-014",
-    departmentId: "dept-marketing",
-    requesterName: "Hải Đăng",
-    content: "Cài Adobe Creative Cloud cho máy thiết kế mới.",
-    priority: "MEDIUM",
-    status: "DONE",
-    assignedToId: "it-linh",
-    resolutionNote: "Đã cài đặt và kích hoạt license theo tài khoản phòng Marketing.",
-    attachmentName: "",
-    createdAt: new Date(now.getTime() - 25 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(now.getTime() - 20 * 60 * 60 * 1000).toISOString(),
-    history: []
-  },
-  {
-    id: "REQ-260705-009",
-    departmentId: "dept-sales",
-    requesterName: "Hoàng Nam",
-    content: "Không truy cập được thư mục dùng chung Sales trong mạng nội bộ.",
-    priority: "MEDIUM",
-    status: "REJECTED",
-    assignedToId: "it-khoa",
-    resolutionNote: "Tài khoản đang ngoài nhóm phân quyền. Đã chuyển yêu cầu sang quản lý Sales xác nhận quyền truy cập.",
-    attachmentName: "",
-    createdAt: new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(now.getTime() - 44 * 60 * 60 * 1000).toISOString(),
-    history: []
   }
 ];
