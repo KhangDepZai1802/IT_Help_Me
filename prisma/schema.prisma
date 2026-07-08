@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountRole {
+  DEPARTMENT
+  IT
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum RequestStatus {
+  NEW
+  IN_PROGRESS
+  DONE
+  REJECTED
+}
+
+model Department {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  requests  Request[]
+  accounts  Account[]
+}
+
+model ITStaff {
+  id        String                 @id @default(uuid())
+  fullName  String
+  isActive  Boolean                @default(true)
+  createdAt DateTime               @default(now())
+  requests  Request[]              @relation("AssignedRequests")
+  histories RequestStatusHistory[]
+}
+
+model Account {
+  id           String      @id @default(uuid())
+  username     String      @unique
+  passwordHash String
+  role         AccountRole
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  createdAt    DateTime    @default(now())
+}
+
+model Request {
+  id             String                 @id @default(uuid())
+  departmentId   String
+  department     Department             @relation(fields: [departmentId], references: [id])
+  requesterName  String
+  content        String
+  priority       Priority               @default(MEDIUM)
+  status         RequestStatus          @default(NEW)
+  assignedToId   String?
+  assignedTo     ITStaff?               @relation("AssignedRequests", fields: [assignedToId], references: [id])
+  resolutionNote String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  attachments    RequestAttachment[]
+  statusHistory  RequestStatusHistory[]
+}
+
+model RequestAttachment {
+  id         String   @id @default(uuid())
+  requestId  String
+  request    Request  @relation(fields: [requestId], references: [id])
+  fileUrl    String
+  fileName   String
+  uploadedAt DateTime @default(now())
+}
+
+model RequestStatusHistory {
+  id          String         @id @default(uuid())
+  requestId   String
+  request     Request        @relation(fields: [requestId], references: [id])
+  oldStatus   RequestStatus?
+  newStatus   RequestStatus
+  changedById String?
+  changedBy   ITStaff?       @relation(fields: [changedById], references: [id])
+  note        String?
+  changedAt   DateTime       @default(now())
+}
