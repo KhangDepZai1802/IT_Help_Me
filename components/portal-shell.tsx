@@ -14,10 +14,14 @@ import {
   History,
   Inbox,
   LayoutDashboard,
+  LogIn,
+  LogOut,
   Plus,
   Search,
   Send,
   Settings2,
+  ShieldCheck,
+  Star,
   Trash2,
   UserRoundCheck,
   X
@@ -26,9 +30,15 @@ import type { LucideIcon } from "lucide-react";
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { priorityLabels, priorityTone, statusLabels, statusTone } from "@/lib/constants";
 import { initialDepartments, initialRequests, initialStaff } from "@/lib/sample-data";
-import type { Department, ITRequest, ITStaff, Priority, RequestHistory, RequestStatus, Role } from "@/lib/types";
+import type { Department, ITRequest, ITStaff, Priority, Rating, RequestStatus, Role } from "@/lib/types";
 
 const STORAGE_KEY = "it-help-me-state-v1";
+const IT_LOGIN_PASSWORD = "123456";
+
+type LoginSession = {
+  role: Role;
+  departmentId: string;
+};
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("vi-VN", {
@@ -90,6 +100,10 @@ function formatMonthLabel(value: string) {
 
 export function PortalShell() {
   const [role, setRole] = useState<Role>("IT");
+  const [session, setSession] = useState<LoginSession | null>(null);
+  const [loginRole, setLoginRole] = useState<Role | "">("");
+  const [loginDepartmentId, setLoginDepartmentId] = useState(initialDepartments[0].id);
+  const [loginPassword, setLoginPassword] = useState("");
   const [departments, setDepartments] = useState<Department[]>(initialDepartments);
   const [staff, setStaff] = useState<ITStaff[]>(initialStaff);
   const [requests, setRequests] = useState<ITRequest[]>(initialRequests);
@@ -118,18 +132,23 @@ export function PortalShell() {
   useEffect(() => {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as {
-        departments: Department[];
-        staff: ITStaff[];
-        requests: ITRequest[];
-        activeDepartmentId: string;
-      };
-      setDepartments(parsed.departments);
-      setStaff(parsed.staff);
-      setRequests(parsed.requests);
-      setActiveDepartmentId(parsed.activeDepartmentId);
-      setNewRequestDepartmentId(parsed.activeDepartmentId);
-      setSelectedRequestId(parsed.requests[0]?.id ?? "");
+      try {
+        const parsed = JSON.parse(raw) as {
+          departments: Department[];
+          staff: ITStaff[];
+          requests: ITRequest[];
+          activeDepartmentId: string;
+        };
+        setDepartments(parsed.departments);
+        setStaff(parsed.staff);
+        setRequests(parsed.requests);
+        setActiveDepartmentId(parsed.activeDepartmentId);
+        setLoginDepartmentId(parsed.activeDepartmentId);
+        setNewRequestDepartmentId(parsed.activeDepartmentId);
+        setSelectedRequestId(parsed.requests[0]?.id ?? "");
+      } catch {
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
     }
     setHasLoaded(true);
   }, []);
@@ -145,6 +164,68 @@ export function PortalShell() {
   const departmentName = (id: string) => departments.find((department) => department.id === id)?.name ?? "Không rõ";
   const staffName = (id: string | null) => staff.find((member) => member.id === id)?.fullName ?? "Chưa gán";
 
+  function pickFirstVisibleRequestId(nextRole: Role, departmentId: string) {
+    return (
+      requests.find((request) => request.status !== "DONE" && (nextRole === "IT" || request.departmentId === departmentId))?.id ??
+      ""
+    );
+  }
+
+  function resetViewFilters() {
+    setQuery("");
+    setStatusFilter("ALL");
+    setDepartmentFilter("ALL");
+  }
+
+  function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!loginRole) {
+      window.alert("Vui lòng chọn tài khoản/phòng ban trước khi vào hệ thống.");
+      return;
+    }
+
+    if (loginRole === "DEPARTMENT" && !loginDepartmentId) {
+      window.alert("Vui lòng chọn phòng ban trước khi vào hệ thống.");
+      return;
+    }
+
+    if (loginRole === "IT" && loginPassword !== IT_LOGIN_PASSWORD) {
+      window.alert("Mật khẩu phòng IT không đúng.");
+      return;
+    }
+
+    const nextDepartmentId = loginRole === "DEPARTMENT" ? loginDepartmentId : activeDepartmentId;
+    const loginLabel = loginRole === "IT" ? "Phòng IT" : departmentName(loginDepartmentId);
+    const shouldEnter = window.confirm(`Chắc chưa?\nBạn sẽ đăng nhập bằng tài khoản ${loginLabel}.`);
+    if (!shouldEnter) return;
+
+    setSession({ role: loginRole, departmentId: nextDepartmentId });
+    setRole(loginRole);
+    if (loginRole === "DEPARTMENT") {
+      setActiveDepartmentId(loginDepartmentId);
+      setNewRequestDepartmentId(loginDepartmentId);
+    }
+    resetViewFilters();
+    setSelectedRequestId(pickFirstVisibleRequestId(loginRole, nextDepartmentId));
+  }
+
+  function handleLogout() {
+    setSession(null);
+    setLoginRole("");
+    setLoginPassword("");
+    setRole("IT");
+    resetViewFilters();
+  }
+
+  function handleRoleChange(nextRole: Role) {
+    if (!session) return;
+    if (session.role !== "IT" && nextRole === "IT") return;
+
+    setRole(nextRole);
+    resetViewFilters();
+    setSelectedRequestId(pickFirstVisibleRequestId(nextRole, activeDepartmentId));
+  }
+
   const todayPendingRequests = useMemo(() => {
     return requests
       .filter((request) => (role === "IT" ? true : request.departmentId === activeDepartmentId))
@@ -157,6 +238,7 @@ export function PortalShell() {
   const filteredRequests = useMemo(() => {
     return requests
       .filter((request) => (role === "IT" ? true : request.departmentId === activeDepartmentId))
+      .filter((request) => request.status !== "DONE" && request.status !== "REJECTED")
       .filter((request) => (statusFilter === "ALL" ? true : request.status === statusFilter))
       .filter((request) => (departmentFilter === "ALL" || role !== "IT" ? true : request.departmentId === departmentFilter))
       .filter((request) => {
@@ -170,7 +252,7 @@ export function PortalShell() {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [activeDepartmentId, departmentFilter, query, requests, role, statusFilter]);
 
-  const selectedRequest = requests.find((request) => request.id === selectedRequestId) ?? filteredRequests[0] ?? requests[0];
+  const selectedRequest = filteredRequests.find((request) => request.id === selectedRequestId) ?? filteredRequests[0];
 
   useEffect(() => {
     if (!selectedRequest) return;
@@ -180,8 +262,10 @@ export function PortalShell() {
   }, [selectedRequest?.id, selectedRequest]);
 
   const requestsForMonth = useMemo(() => {
-    return requests.filter((request) => matchesMonth(request.createdAt, selectedMonth));
-  }, [requests, selectedMonth]);
+    return requests
+      .filter((request) => (role === "IT" ? true : request.departmentId === activeDepartmentId))
+      .filter((request) => matchesMonth(request.createdAt, selectedMonth));
+  }, [activeDepartmentId, requests, role, selectedMonth]);
 
   const statusStats = useMemo(() => {
     return (["NEW", "IN_PROGRESS", "DONE", "REJECTED"] as RequestStatus[]).map((status) => ({
@@ -191,18 +275,21 @@ export function PortalShell() {
   }, [requestsForMonth]);
 
   const departmentStats = useMemo(() => {
-    return departments
+    const visibleDepartments = role === "IT" ? departments : departments.filter((department) => department.id === activeDepartmentId);
+    return visibleDepartments
       .map((department) => ({
         name: department.name,
         count: requestsForMonth.filter((request) => request.departmentId === department.id).length
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
-  }, [departments, requestsForMonth]);
+  }, [activeDepartmentId, departments, requestsForMonth, role]);
 
-  const selectedRequestHistoryForMonth = useMemo(() => {
-    return (selectedRequest?.history ?? []).filter((item) => matchesMonth(item.changedAt, selectedMonth));
-  }, [selectedMonth, selectedRequest]);
+  const historyRequestsForMonth = useMemo(() => {
+    return requestsForMonth
+      .filter((request) => request.status === "DONE" || request.status === "REJECTED")
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }, [requestsForMonth]);
 
   function handleCreateRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -309,6 +396,35 @@ export function PortalShell() {
     if (draftAssignedToId === staffId) setDraftAssignedToId("");
   }
 
+  function handleDeleteRequest(requestId: string) {
+    const request = requests.find((item) => item.id === requestId);
+    if (!request) return;
+
+    const shouldDelete = window.confirm(`Bạn có chắc muốn xóa phiếu ${request.id} của ${request.requesterName}?`);
+    if (!shouldDelete) return;
+
+    setRequests((current) => {
+      const remaining = current.filter((item) => item.id !== requestId);
+      if (selectedRequestId === requestId) {
+        const nextRequest = remaining.find(
+          (item) => item.status !== "DONE" && item.status !== "REJECTED" && (role === "IT" || item.departmentId === activeDepartmentId)
+        );
+        setSelectedRequestId(nextRequest?.id ?? "");
+      }
+      return remaining;
+    });
+  }
+
+  function handleRateRequest(requestId: string, rating: Rating) {
+    setRequests((current) =>
+      current.map((request) =>
+        request.id === requestId && request.status === "DONE" && !request.rating
+          ? { ...request, rating, updatedAt: new Date().toISOString() }
+          : request
+      )
+    );
+  }
+
   function exportCsv() {
     const header = ["Mã", "Phòng ban", "Người gửi", "Nội dung", "Ưu tiên", "Trạng thái", "Phụ trách", "Ghi chú", "Ngày tạo"];
     const rows = filteredRequests.map((request) => [
@@ -332,6 +448,31 @@ export function PortalShell() {
     URL.revokeObjectURL(url);
   }
 
+  if (!hasLoaded) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-slate-50 px-4 text-slate-900">
+        <div className="rounded-lg bg-white px-5 py-4 text-sm font-black text-slate-600 shadow-sm ring-1 ring-slate-200">
+          Đang tải hệ thống...
+        </div>
+      </main>
+    );
+  }
+
+  if (!session) {
+    return (
+      <LoginScreen
+        departments={departments}
+        loginDepartmentId={loginDepartmentId}
+        loginPassword={loginPassword}
+        loginRole={loginRole}
+        setLoginDepartmentId={setLoginDepartmentId}
+        setLoginPassword={setLoginPassword}
+        setLoginRole={setLoginRole}
+        onSubmit={handleLogin}
+      />
+    );
+  }
+
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-slate-50 px-4 py-5 text-slate-900 sm:px-6 lg:px-8">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[330px] hero-panel" />
@@ -352,35 +493,52 @@ export function PortalShell() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex rounded-md bg-white/16 p-1 ring-1 ring-white/25">
-                <button
-                  className={`rounded px-3 py-2 text-sm font-extrabold ${role === "DEPARTMENT" ? "bg-white text-aqua" : "text-white/82"}`}
-                  onClick={() => setRole("DEPARTMENT")}
-                  type="button"
-                >
+              {session.role === "IT" ? (
+                <div className="flex rounded-md bg-white/16 p-1 ring-1 ring-white/25">
+                  <button
+                    className={`rounded px-3 py-2 text-sm font-extrabold ${role === "DEPARTMENT" ? "bg-white text-aqua" : "text-white/82"}`}
+                    onClick={() => handleRoleChange("DEPARTMENT")}
+                    type="button"
+                  >
+                    Phòng ban
+                  </button>
+                  <button
+                    className={`rounded px-3 py-2 text-sm font-extrabold ${role === "IT" ? "bg-white text-aqua" : "text-white/82"}`}
+                    onClick={() => handleRoleChange("IT")}
+                    type="button"
+                  >
+                    IT
+                  </button>
+                </div>
+              ) : (
+                <span className="rounded-md bg-white px-3 py-2 text-sm font-extrabold text-aqua shadow-sm">
                   Phòng ban
-                </button>
-                <button
-                  className={`rounded px-3 py-2 text-sm font-extrabold ${role === "IT" ? "bg-white text-aqua" : "text-white/82"}`}
-                  onClick={() => setRole("IT")}
-                  type="button"
-                >
-                  IT
-                </button>
-              </div>
+                </span>
+              )}
 
               {role === "DEPARTMENT" ? (
                 <CustomSelect
                   className="w-44"
                   buttonClassName="glass-field h-10 border-white/25 bg-white/20 text-white shadow-none hover:bg-white/25"
+                  disabled={session.role === "DEPARTMENT"}
                   value={activeDepartmentId}
                   options={departments.map((department) => ({ value: department.id, label: department.name }))}
                   onChange={(value) => {
                     setActiveDepartmentId(value);
                     setNewRequestDepartmentId(value);
+                    setSelectedRequestId(pickFirstVisibleRequestId("DEPARTMENT", value));
                   }}
                 />
               ) : null}
+
+              <button
+                className="flex h-10 items-center gap-2 rounded-md bg-white/16 px-3 text-sm font-extrabold text-white ring-1 ring-white/25 hover:bg-white/24"
+                type="button"
+                onClick={handleLogout}
+              >
+                <LogOut size={16} />
+                Đăng xuất
+              </button>
 
               <NotificationBell
                 departmentName={departmentName}
@@ -439,7 +597,8 @@ export function PortalShell() {
             setQuery={setQuery}
             onExport={exportCsv}
             onOpenHistory={() => setIsHistoryOpen(true)}
-            historyCount={selectedRequestHistoryForMonth.length}
+            historyCount={historyRequestsForMonth.length}
+            onDeleteRequest={role === "IT" ? handleDeleteRequest : undefined}
           />
 
           <InsightsPanel
@@ -453,12 +612,15 @@ export function PortalShell() {
           />
         </section>
 
-        <HistoryModal
-          historyItems={selectedRequestHistoryForMonth}
+        <RequestHistoryModal
+          departmentName={departmentName}
+          historyRequests={historyRequestsForMonth}
           isOpen={isHistoryOpen}
-          request={selectedRequest}
+          role={role}
           selectedMonth={selectedMonth}
+          setSelectedMonth={setSelectedMonth}
           onClose={() => setIsHistoryOpen(false)}
+          onRateRequest={handleRateRequest}
         />
         <CatalogModal
           isOpen={isCatalogOpen}
@@ -491,6 +653,130 @@ function SectionTitle({ icon: Icon, title }: { icon: LucideIcon; title: string }
         <h2 className="text-lg font-black uppercase tracking-wide text-slate-900">{title}</h2>
       </div>
     </div>
+  );
+}
+
+function LoginScreen({
+  departments,
+  loginDepartmentId,
+  loginPassword,
+  loginRole,
+  setLoginDepartmentId,
+  setLoginPassword,
+  setLoginRole,
+  onSubmit
+}: {
+  departments: Department[];
+  loginDepartmentId: string;
+  loginPassword: string;
+  loginRole: Role | "";
+  setLoginDepartmentId: (value: string) => void;
+  setLoginPassword: (value: string) => void;
+  setLoginRole: (value: Role | "") => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const canSubmit = (loginRole === "IT" && Boolean(loginPassword)) || (loginRole === "DEPARTMENT" && Boolean(loginDepartmentId));
+
+  return (
+    <main className="relative min-h-screen overflow-x-hidden bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[360px] hero-panel" />
+      <section className="relative mx-auto flex min-h-[calc(100vh-48px)] max-w-3xl items-center">
+        <form className="w-full rounded-lg bg-white p-5 shadow-soft ring-1 ring-slate-200 sm:p-7" onSubmit={onSubmit}>
+          <div className="mb-6 flex items-center gap-3">
+            <div className="flex size-12 items-center justify-center rounded-md bg-aqua text-white shadow-lg shadow-aqua/20">
+              <HardDrive size={24} />
+            </div>
+            <div>
+              <p className="text-2xl font-black tracking-wide text-slate-950">IT HELP ME!</p>
+              <p className="mt-1 text-sm font-bold text-slate-500">Chọn tài khoản/phòng ban trước khi vào hệ thống.</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button
+              className={`rounded-md border p-4 text-left transition ${
+                loginRole === "DEPARTMENT"
+                  ? "border-aqua bg-aqua/8 shadow-sm ring-4 ring-aqua/10"
+                  : "border-slate-200 bg-white hover:border-aqua/50"
+              }`}
+              type="button"
+              aria-pressed={loginRole === "DEPARTMENT"}
+              onClick={() => {
+                setLoginRole("DEPARTMENT");
+                setLoginPassword("");
+              }}
+            >
+              <span className="mb-3 flex size-10 items-center justify-center rounded-md bg-aqua/12 text-aqua">
+                <UserRoundCheck size={20} />
+              </span>
+              <span className="block text-sm font-black uppercase tracking-wide text-slate-900">Phòng ban khác</span>
+              <span className="mt-2 block text-sm font-semibold leading-6 text-slate-500">
+                Chỉ gửi yêu cầu và xem lịch sử của phòng ban đã chọn.
+              </span>
+            </button>
+
+            <button
+              className={`rounded-md border p-4 text-left transition ${
+                loginRole === "IT"
+                  ? "border-aqua bg-aqua/8 shadow-sm ring-4 ring-aqua/10"
+                  : "border-slate-200 bg-white hover:border-aqua/50"
+              }`}
+              type="button"
+              aria-pressed={loginRole === "IT"}
+              onClick={() => setLoginRole("IT")}
+            >
+              <span className="mb-3 flex size-10 items-center justify-center rounded-md bg-slate-900 text-white">
+                <ShieldCheck size={20} />
+              </span>
+              <span className="block text-sm font-black uppercase tracking-wide text-slate-900">Phòng IT</span>
+              <span className="mt-2 block text-sm font-semibold leading-6 text-slate-500">
+                Xử lý toàn bộ ticket và có thể chuyển sang giao diện phòng ban.
+              </span>
+            </button>
+          </div>
+
+          <label className="mt-5 block">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500">Phòng ban đăng nhập</span>
+            {loginRole === "IT" ? (
+              <div className="mt-2 flex h-11 items-center rounded-md border border-slate-200 bg-slate-100 px-3 text-sm font-bold text-slate-500 shadow-sm">
+                Phòng IT
+              </div>
+            ) : (
+              <CustomSelect
+                className="mt-2"
+                disabled={loginRole !== "DEPARTMENT"}
+                value={loginDepartmentId}
+                options={departments.map((department) => ({ value: department.id, label: department.name }))}
+                onChange={setLoginDepartmentId}
+              />
+            )}
+          </label>
+
+          {loginRole === "IT" ? (
+            <label className="mt-4 block">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">Mật khẩu phòng IT</span>
+              <input
+                className="mt-2 h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-aqua"
+                type="password"
+                value={loginPassword}
+                onChange={(event) => setLoginPassword(event.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </label>
+          ) : null}
+
+          <button
+            className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-md bg-aqua px-4 text-sm font-black text-white shadow-lg shadow-aqua/15 hover:bg-aqua/90 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+            type="submit"
+            disabled={!canSubmit}
+          >
+            <LogIn size={18} />
+            Vào hệ thống
+          </button>
+        </form>
+      </section>
+    </main>
   );
 }
 
@@ -607,7 +893,7 @@ function MonthPicker({ value, onChange }: { value: string; onChange: (value: str
       </button>
 
       {isOpen ? (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-full min-w-72 rounded-lg border border-slate-200 bg-white p-3 text-slate-900 shadow-soft">
+        <div className="absolute left-0 top-[calc(100%+8px)] z-[120] w-full min-w-72 rounded-lg border border-slate-200 bg-white p-3 text-slate-900 shadow-soft">
           <div className="mb-3 flex items-center justify-between gap-2 rounded-md bg-slate-50 p-1 ring-1 ring-slate-200">
             <button
               className="flex size-8 items-center justify-center rounded-md text-slate-600 hover:bg-white hover:text-aqua"
@@ -932,7 +1218,8 @@ function TicketBoard({
   statusFilter,
   onExport,
   onOpenHistory,
-  historyCount
+  historyCount,
+  onDeleteRequest
 }: {
   departmentFilter: string;
   departmentName: (id: string) => string;
@@ -950,7 +1237,12 @@ function TicketBoard({
   onExport: () => void;
   onOpenHistory: () => void;
   historyCount: number;
+  onDeleteRequest?: (requestId: string) => void;
 }) {
+  const ticketStatusOptions = Object.entries(statusLabels)
+    .filter(([value]) => value !== "DONE" && value !== "REJECTED")
+    .map(([value, label]) => ({ value: value as RequestStatus, label }));
+
   return (
     <div className="space-y-3">
       <Panel className="min-h-[520px]">
@@ -959,12 +1251,14 @@ function TicketBoard({
             <span className="flex size-9 items-center justify-center rounded-md bg-amber-50 text-amber-700 ring-1 ring-amber-100">
               <Inbox size={18} />
             </span>
-            <h2 className="text-lg font-black uppercase tracking-wide text-slate-900">{role === "IT" ? "Tickets" : "Lịch sử"}</h2>
+            <h2 className="text-lg font-black uppercase tracking-wide text-slate-900">Tickets</h2>
           </div>
-          <button className="flex h-9 items-center gap-2 rounded-md bg-slate-900 px-3 text-xs font-black text-white" type="button" onClick={onExport}>
-            <Download size={15} />
-            Excel
-          </button>
+          {role === "IT" ? (
+            <button className="flex h-9 items-center gap-2 rounded-md bg-slate-900 px-3 text-xs font-black text-white" type="button" onClick={onExport}>
+              <Download size={15} />
+              Excel
+            </button>
+          ) : null}
         </div>
 
         <label className="mb-3 flex h-11 items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-3">
@@ -980,7 +1274,7 @@ function TicketBoard({
         <div className="mb-4 grid gap-3 sm:grid-cols-2">
           <CustomSelect
             value={statusFilter}
-            options={[{ value: "ALL", label: "Tất cả trạng thái" }, ...Object.entries(statusLabels).map(([value, label]) => ({ value: value as RequestStatus, label }))]}
+            options={[{ value: "ALL", label: "Tất cả trạng thái" }, ...ticketStatusOptions]}
             onChange={setStatusFilter}
             buttonClassName="h-10"
           />
@@ -996,39 +1290,57 @@ function TicketBoard({
         </div>
 
         <div className="thin-scrollbar max-h-[440px] space-y-3 overflow-auto pr-1">
-          {filteredRequests.map((request) => (
-            <button
-              className={`w-full rounded-md border p-4 text-left ${
-                selectedRequestId === request.id ? "border-aqua bg-aqua/8 shadow-sm" : "border-slate-200 bg-white hover:border-slate-300"
-              }`}
-              key={request.id}
-              type="button"
-              onClick={() => setSelectedRequestId(request.id)}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-black text-slate-900">{request.requesterName}</p>
-                  <p className="mt-1 text-xs font-bold text-slate-400">
-                    {request.id} · {departmentName(request.departmentId)} · {formatDateTime(request.createdAt)}
-                  </p>
-                </div>
-                <span className={`rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${statusTone[request.status]}`}>
-                  {statusLabels[request.status]}
-                </span>
-              </div>
-              <p className="mt-3 line-clamp-2 text-sm font-semibold leading-6 text-slate-600">{request.content}</p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className={`rounded px-2 py-1 text-[11px] font-black ${priorityTone[request.priority]}`}>{priorityLabels[request.priority]}</span>
-                <span className="rounded bg-slate-100 px-2 py-1 text-[11px] font-black text-slate-500">{staffName(request.assignedToId)}</span>
-                {request.attachmentName ? (
-                  <span className="flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-[11px] font-black text-slate-600">
-                    <FileText size={12} />
-                    File
-                  </span>
+          {filteredRequests.length ? (
+            filteredRequests.map((request) => (
+              <div
+                className={`relative rounded-md border ${
+                  selectedRequestId === request.id ? "border-aqua bg-aqua/8 shadow-sm" : "border-slate-200 bg-white hover:border-slate-300"
+                }`}
+                key={request.id}
+              >
+                <button className="w-full p-4 pr-12 text-left" type="button" onClick={() => setSelectedRequestId(request.id)}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-black text-slate-900">{request.requesterName}</p>
+                      <p className="mt-1 text-xs font-bold text-slate-400">
+                        {request.id} · {departmentName(request.departmentId)} · {formatDateTime(request.createdAt)}
+                      </p>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${statusTone[request.status]}`}>
+                      {statusLabels[request.status]}
+                    </span>
+                  </div>
+                  <p className="mt-3 line-clamp-2 text-sm font-semibold leading-6 text-slate-600">{request.content}</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className={`rounded px-2 py-1 text-[11px] font-black ${priorityTone[request.priority]}`}>{priorityLabels[request.priority]}</span>
+                    <span className="rounded bg-slate-100 px-2 py-1 text-[11px] font-black text-slate-500">{staffName(request.assignedToId)}</span>
+                    {request.attachmentName ? (
+                      <span className="flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-[11px] font-black text-slate-600">
+                        <FileText size={12} />
+                        File
+                      </span>
+                    ) : null}
+                  </div>
+                </button>
+
+                {role === "IT" && onDeleteRequest ? (
+                  <button
+                    className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-md bg-rose-50 text-rose-500 ring-1 ring-rose-100 hover:bg-rose-100 hover:text-rose-700 hover:ring-rose-200"
+                    type="button"
+                    title="Xóa phiếu"
+                    aria-label={`Xóa phiếu ${request.id}`}
+                    onClick={() => onDeleteRequest(request.id)}
+                  >
+                    <Trash2 size={15} />
+                  </button>
                 ) : null}
               </div>
-            </button>
-          ))}
+            ))
+          ) : (
+            <p className="rounded-md bg-slate-50 p-4 text-sm font-semibold text-slate-500 ring-1 ring-slate-200">
+              Không có ticket đang xử lý theo bộ lọc hiện tại.
+            </p>
+          )}
         </div>
       </Panel>
 
@@ -1224,28 +1536,95 @@ function CatalogModal({
   );
 }
 
-function HistoryModal({
-  historyItems,
-  isOpen,
-  request,
-  selectedMonth,
-  onClose
+function StarRating({
+  value,
+  interactive,
+  onChange
 }: {
-  historyItems: RequestHistory[];
+  value?: Rating;
+  interactive: boolean;
+  onChange?: (rating: Rating) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      {([1, 2, 3, 4, 5] as Rating[]).map((rating) => {
+        const isActive = Boolean(value && rating <= value);
+        if (!interactive) {
+          return (
+            <Star
+              className={isActive ? "fill-amber-400 text-amber-400" : "text-slate-300"}
+              key={rating}
+              size={16}
+            />
+          );
+        }
+
+        return (
+          <button
+            className={`flex size-7 items-center justify-center rounded-md ${
+              isActive ? "text-amber-500" : "text-slate-300 hover:bg-amber-50 hover:text-amber-500"
+            }`}
+            type="button"
+            title={`${rating} sao`}
+            aria-label={`Đánh giá ${rating} sao`}
+            key={rating}
+            onClick={() => onChange?.(rating)}
+          >
+            <Star className={isActive ? "fill-amber-400" : ""} size={16} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function RequestHistoryModal({
+  historyRequests,
+  departmentName,
+  isOpen,
+  role,
+  selectedMonth,
+  setSelectedMonth,
+  onClose,
+  onRateRequest
+}: {
+  historyRequests: ITRequest[];
+  departmentName: (id: string) => string;
   isOpen: boolean;
-  request?: ITRequest;
+  role: Role;
   selectedMonth: string;
+  setSelectedMonth: (value: string) => void;
   onClose: () => void;
+  onRateRequest: (requestId: string, rating: Rating) => void;
 }) {
   if (!isOpen) return null;
+
+  function exportHistoryCsv() {
+    const header = ["Người gửi", "Phòng ban", "Thời gian nhờ", "Trạng thái", "Đánh giá"];
+    const rows = historyRequests.map((request) => [
+      request.requesterName,
+      departmentName(request.departmentId),
+      formatDateTime(request.createdAt),
+      statusLabels[request.status],
+      request.status === "DONE" ? (request.rating ? `${request.rating}/5` : "Chưa đánh giá") : "Không áp dụng"
+    ]);
+    const csv = [header, ...rows].map((row) => row.map(safeCsvCell).join(",")).join("\n");
+    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `it-help-me-history-${selectedMonth}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/35 px-4 py-6 backdrop-blur-sm" onMouseDown={onClose}>
       <div
-        className="w-[min(560px,calc(100vw-32px))] overflow-hidden rounded-lg bg-white text-slate-900 shadow-soft ring-1 ring-slate-200"
+        className="w-[min(880px,calc(100vw-32px))] overflow-visible rounded-lg bg-white text-slate-900 shadow-soft ring-1 ring-slate-200"
         role="dialog"
         aria-modal="true"
-        aria-label="Lịch sử xử lý"
+        aria-label="Lịch sử hoàn thành"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
@@ -1256,40 +1635,89 @@ function HistoryModal({
               </span>
               <h2 className="text-lg font-black uppercase tracking-wide text-slate-900">Lịch sử</h2>
             </div>
-            <p className="mt-2 truncate text-xs font-bold text-slate-400">
-              {request ? `${request.id} · ${request.requesterName}` : "Chưa có yêu cầu"}
-            </p>
+            <p className="mt-2 truncate text-xs font-bold text-slate-400">Các yêu cầu đã hoàn thành hoặc bị từ chối</p>
           </div>
-          <button
-            className="flex size-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-700"
-            type="button"
-            aria-label="Đóng lịch sử"
-            onClick={onClose}
-          >
-            <X size={18} />
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {role === "IT" ? (
+              <button
+                className="flex h-9 items-center gap-2 rounded-md bg-slate-900 px-3 text-xs font-black text-white hover:bg-slate-700"
+                type="button"
+                onClick={exportHistoryCsv}
+              >
+                <Download size={15} />
+                Excel
+              </button>
+            ) : null}
+            <button
+              className="flex size-9 items-center justify-center rounded-md bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-700"
+              type="button"
+              aria-label="Đóng lịch sử"
+              onClick={onClose}
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="px-5 py-4">
-          <p className="mb-3 text-xs font-bold text-slate-400">Đang lọc theo tháng {selectedMonth}</p>
-          <div className="thin-scrollbar max-h-[55vh] space-y-3 overflow-auto pr-1">
-            {historyItems.length ? (
-              historyItems.map((item) => (
-                <div className="rounded-md bg-slate-50 p-3 ring-1 ring-slate-200" key={item.id}>
-                  <div className="flex items-center gap-2 text-xs font-black text-slate-500">
-                    <CalendarDays size={14} />
-                    {formatDateTime(item.changedAt)}
-                  </div>
-                  <p className="mt-1 text-sm font-bold text-slate-800">{statusLabels[item.newStatus]}</p>
-                  <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{item.note}</p>
-                </div>
-              ))
-            ) : (
-              <p className="rounded-md bg-slate-50 p-4 text-sm font-semibold text-slate-500 ring-1 ring-slate-200">
-                Không có thay đổi trạng thái trong tháng này.
-              </p>
-            )}
-          </div>
+          <label className="mb-4 block max-w-xs">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500">Tháng lịch sử</span>
+            <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
+          </label>
+
+          {historyRequests.length ? (
+            <div className="thin-scrollbar max-h-[58vh] overflow-auto rounded-md border border-slate-200">
+              <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+                <thead className="sticky top-0 bg-slate-50 text-xs font-black uppercase tracking-wider text-slate-500">
+                  <tr>
+                    <th className="border-b border-slate-200 px-3 py-3">Người gửi</th>
+                    <th className="border-b border-slate-200 px-3 py-3">Phòng ban</th>
+                    <th className="border-b border-slate-200 px-3 py-3">Thời gian nhờ</th>
+                    <th className="border-b border-slate-200 px-3 py-3">Trạng thái</th>
+                    <th className="border-b border-slate-200 px-3 py-3">Đánh giá</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {historyRequests.map((request) => (
+                    <tr className="bg-white hover:bg-slate-50" key={request.id}>
+                      <td className="px-3 py-3 font-black text-slate-800">{request.requesterName}</td>
+                      <td className="px-3 py-3 font-semibold text-slate-600">{departmentName(request.departmentId)}</td>
+                      <td className="px-3 py-3 font-semibold text-slate-600">{formatDateTime(request.createdAt)}</td>
+                      <td className="px-3 py-3">
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${statusTone[request.status]}`}>
+                          {statusLabels[request.status]}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          {request.status === "DONE" ? (
+                            <>
+                              <StarRating
+                                value={request.rating}
+                                interactive={role === "DEPARTMENT" && !request.rating}
+                                onChange={(rating) => onRateRequest(request.id, rating)}
+                              />
+                              {request.rating ? (
+                                <span className="text-xs font-black text-slate-500">{request.rating}/5</span>
+                              ) : (
+                                <span className="text-xs font-bold text-slate-400">Chưa đánh giá</span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-xs font-bold text-slate-400">Không áp dụng</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="rounded-md bg-slate-50 p-4 text-sm font-semibold text-slate-500 ring-1 ring-slate-200">
+              Chưa có yêu cầu hoàn thành hoặc bị từ chối trong tháng này.
+            </p>
+          )}
         </div>
       </div>
     </div>

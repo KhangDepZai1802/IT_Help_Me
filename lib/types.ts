@@ -4,6 +4,8 @@ export type Priority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
 export type RequestStatus = "NEW" | "IN_PROGRESS" | "DONE" | "REJECTED";
 
+export type Rating = 1 | 2 | 3 | 4 | 5;
+
 export type Department = {
   id: string;
   name: string;
@@ -36,6 +38,7 @@ export type ITRequest = {
   assignedToId: string | null;
   resolutionNote: string;
   attachmentName: string;
+  rating?: Rating;
   createdAt: string;
   updatedAt: string;
   history: RequestHistory[];

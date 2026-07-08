@@ -30,20 +30,20 @@
 ## TRẠNG THÁI HIỆN TẠI
 
 1. Đã khởi tạo Next.js App Router + TypeScript + Tailwind CSS cho MVP `IT Help Me!`.
-2. Đã chỉnh giao diện theo hướng dashboard card: bỏ chữ Portal/Welcome, bỏ dãy module Hardware/Software..., chỉ giữ vùng xanh ngọc trang trí phía trên và các card nghiệp vụ chính.
-3. App hiện chạy với dữ liệu mẫu/localStorage: phòng ban gửi yêu cầu, IT xem/lọc/assign/cập nhật trạng thái, lọc thống kê/lịch sử theo tháng, quản lý nhanh danh mục, xuất CSV mở được bằng Excel.
-4. Đã thêm `prisma/schema.prisma` theo thiết kế PostgreSQL/Supabase trong tài liệu, nhưng chưa kết nối DB thật vì chưa có `DATABASE_URL` Supabase.
-5. Chưa làm auth/session thật; hiện dùng chuyển vai trò Phòng ban/IT ngay trên giao diện để demo workflow MVP.
-6. Dev server đang chạy tại `http://localhost:3000`.
+2. Giao diện dashboard hiện tập trung vào các card nghiệp vụ chính: gửi yêu cầu, Tickets, xử lý IT, thống kê, danh mục và lịch sử.
+3. App hiện chạy với dữ liệu mẫu/localStorage: phòng ban gửi yêu cầu; IT xem/lọc/assign/cập nhật/xóa ticket; lịch sử lưu yêu cầu hoàn thành/từ chối theo tháng; phòng ban đánh giá sao một lần cho yêu cầu hoàn thành.
+4. Đã tách cổng đăng nhập demo cho 2 loại tài khoản: phòng ban thường chỉ vào giao diện phòng ban đã chọn; phòng IT cần mật khẩu `123456` và có thể xem cả giao diện IT lẫn phòng ban.
+5. Đã thêm `prisma/schema.prisma` theo thiết kế PostgreSQL/Supabase trong tài liệu, nhưng chưa kết nối DB thật vì chưa có `DATABASE_URL` Supabase.
+6. Đã deploy production lên Vercel: `https://it-help-me.vercel.app` (deployment mới nhất: `https://it-help-boc1ylbsa-thongdat.vercel.app`).
 
 ## VIỆC TIẾP THEO
 
 1. Tạo Supabase project, điền `DATABASE_URL` vào `.env.local`, chạy Prisma migration đầu tiên.
 2. Thay dữ liệu mẫu/localStorage bằng API routes/server actions dùng Prisma.
-3. Làm auth/session thật cho 2 role: tài khoản phòng ban và tài khoản IT.
+3. Làm auth/session thật cho 2 role: tài khoản phòng ban và tài khoản IT; thay mật khẩu demo hard-code bằng auth thật.
 4. Kết nối Supabase Storage cho file đính kèm.
 5. Xuất Excel server-side bằng `exceljs` hoặc `xlsx` nếu cần file `.xlsx` chuẩn thay vì CSV.
-6. Deploy Vercel sau khi đã có biến môi trường DB/Supabase.
+6. Kiểm tra lại production sau khi nối DB/Supabase và cấu hình biến môi trường trên Vercel.
 
 ## BLOCKERS
 
@@ -52,6 +52,12 @@
 ---
 
 ## NHẬT KÝ SESSION
+
+### [2026-07-08] Session 5 - Codex
+- **Làm được:** Tách cổng đăng nhập theo tài khoản phòng ban/IT; thêm mật khẩu demo cho IT (`123456`); khóa phòng ban thường chỉ xem đúng giao diện/phòng ban; IT xem được cả hai giao diện. Cập nhật Tickets để ẩn yêu cầu hoàn thành/từ chối sang Lịch sử; thêm xóa ticket cho IT có xác nhận; thêm bảng Lịch sử theo tháng cho yêu cầu hoàn thành/từ chối; phòng ban đánh giá sao 1 lần cho yêu cầu hoàn thành; ẩn Excel ở giao diện phòng ban; sửa dropdown tháng trong modal Lịch sử không bị che; deploy production lại lên Vercel.
+- **File thay đổi chính:** `components/portal-shell.tsx`, `lib/types.ts`, `05-WORKLOG.md`.
+- **Đã test:** `npm.cmd run build` thành công local; Vercel production build/deploy thành công. URL production: `https://it-help-me.vercel.app`; deployment URL: `https://it-help-boc1ylbsa-thongdat.vercel.app`.
+- **Lưu ý/cảnh báo cho người sau:** Auth hiện vẫn là demo client-side/localStorage, mật khẩu IT đang hard-code trong frontend nên không dùng như bảo mật thật. Khi nối DB/auth cần chuyển sang session server-side, route protection và phân quyền backend.
 
 ### [2026-07-07] Session 4 - Codex
 - **Làm được:** Thêm lọc tháng dùng chung cho Thống kê và Lịch sử trạng thái; thêm danh sách nhân viên IT hiện có trong Danh mục với nút xóa; đổi chuông thông báo thành dropdown hover hiển thị các yêu cầu hôm nay chưa hoàn tất; thay input file mặc định bằng nút custom để bỏ chữ “No file chosen”.

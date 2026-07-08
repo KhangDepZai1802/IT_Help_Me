@@ -7,3 +7,5 @@ out
 dist
 coverage
 dev-server*.log
+
+.vercel
