@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { forbidden, getAuthSession, unauthorized } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getAppState } from "@/lib/server-data";
 import type { Department, ITRequest, ITStaff } from "@/lib/types";
@@ -11,6 +12,10 @@ type ImportBody = {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = getAuthSession(request);
+    if (!session) return unauthorized();
+    if (session.role !== "IT") return forbidden();
+
     const body = (await request.json()) as ImportBody;
 
     await prisma.$transaction(async (tx: any) => {
@@ -91,7 +96,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return NextResponse.json(await getAppState());
+    return NextResponse.json(await getAppState(session));
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Không thể import dữ liệu cũ." }, { status: 500 });

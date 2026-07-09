@@ -27,12 +27,13 @@ enum RequestStatus {
 }
 
 model Department {
-  id        String    @id @default(uuid())
-  name      String    @unique
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  requests  Request[]
-  accounts  Account[]
+  id           String        @id @default(uuid())
+  name         String        @unique
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  requests     Request[]
+  accounts     Account[]
+  chatMessages ChatMessage[]
 }
 
 model ITStaff {
@@ -92,4 +93,18 @@ model RequestStatusHistory {
   changedBy   ITStaff?       @relation(fields: [changedById], references: [id])
   note        String?
   changedAt   DateTime       @default(now())
+}
+
+model ChatMessage {
+  id           String      @id @default(uuid())
+  departmentId String
+  department   Department  @relation(fields: [departmentId], references: [id])
+  senderRole   AccountRole
+  senderName   String
+  content      String
+  sentAt       DateTime    @default(now())
+  readAt       DateTime?
+
+  @@index([departmentId, sentAt])
+  @@index([senderRole, readAt])
 }

@@ -1,8 +1,22 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
+function databaseUrl() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is required to seed Prisma.");
+  }
+
+  const url = new URL(connectionString);
+  if (url.searchParams.get("sslmode") === "require" && !url.searchParams.has("uselibpqcompat")) {
+    url.searchParams.set("uselibpqcompat", "true");
+  }
+
+  return url.toString();
+}
+
 const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL
+  connectionString: databaseUrl()
 });
 
 const prisma = new PrismaClient({ adapter });

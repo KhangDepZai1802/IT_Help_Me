@@ -18,6 +18,17 @@ export type ITStaff = {
   isActive: boolean;
 };
 
+export type ChatMessage = {
+  id: string;
+  departmentId: string;
+  senderRole: Role;
+  senderName: string;
+  content: string;
+  sentAt: string;
+  readAt: string | null;
+  isRead: boolean;
+};
+
 export type RequestHistory = {
   id: string;
   requestId: string;
@@ -38,6 +49,7 @@ export type ITRequest = {
   assignedToId: string | null;
   resolutionNote: string;
   attachmentName: string;
+  attachmentUrl?: string;
   rating?: Rating;
   createdAt: string;
   updatedAt: string;
