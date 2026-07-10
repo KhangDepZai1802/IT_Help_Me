@@ -1212,7 +1212,7 @@ export function PortalShell() {
           </div>
           <nav className="relative z-10 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <BrandMark className="size-12 bg-white/92 p-1.5 ring-white/35" imageClassName="size-9" />
+              <BrandMark className="size-12" />
               <div>
                 <p className="text-xl font-black tracking-wide">IT HELP ME!</p>
               </div>
@@ -1407,8 +1407,13 @@ function Panel({ children, className = "" }: { children: ReactNode; className?: 
 
 function BrandMark({ className = "", imageClassName = "" }: { className?: string; imageClassName?: string }) {
   return (
-    <span className={`flex shrink-0 items-center justify-center rounded-md shadow-sm ${className}`}>
-      <img className={`object-contain ${imageClassName}`} src={APP_ICON_SRC} alt="" aria-hidden="true" />
+    <span className={`flex shrink-0 items-center justify-center ${className}`}>
+      <img
+        className={`h-full w-full object-contain drop-shadow-[0_1px_1px_rgba(15,23,42,0.22)] ${imageClassName}`}
+        src={APP_ICON_SRC}
+        alt=""
+        aria-hidden="true"
+      />
     </span>
   );
 }
@@ -1464,7 +1469,7 @@ function LoginScreen({
       <section className="relative mx-auto flex w-full flex-1 items-center py-6 sm:max-w-3xl">
         <form className="w-full rounded-lg bg-white p-5 shadow-soft ring-1 ring-slate-200 sm:p-7" onSubmit={onSubmit}>
           <div className="mb-6 flex items-center gap-3">
-            <BrandMark className="size-14 bg-white p-2 ring-1 ring-aqua/20" imageClassName="size-10" />
+            <BrandMark className="size-16" />
             <div>
               <p className="text-2xl font-black tracking-wide text-slate-950">IT HELP ME!</p>
               <p className="mt-1 text-sm font-bold text-slate-500">Chọn tài khoản/phòng ban trước khi vào hệ thống.</p>

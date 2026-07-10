@@ -34,7 +34,7 @@
 3. Đã có session cookie httpOnly ký HMAC và route protection backend: chưa login không thấy ticket; phòng ban chỉ xem/tạo/rating ticket của mình; IT mới quản trị danh mục, xử lý, xóa và import dữ liệu.
 4. Prisma schema PostgreSQL/Supabase đã có các model chính: `Department`, `ITStaff`, `Account`, `Request`, `RequestAttachment`, `RequestStatusHistory`, `ChatMessage`; enum `RequestStatus` có `NEW`, `ACCEPTED`, `IN_PROGRESS`, `DONE`, `REJECTED`.
 5. Runtime Prisma dùng `@prisma/adapter-pg`; `DATABASE_URL` được normalize thêm `uselibpqcompat=true` khi URL có `sslmode=require` để tránh lỗi SSL self-signed của `pg`.
-6. Production Vercel `https://it-help-me.vercel.app` đang ở bản deploy sau các fix chat/UTF-8 gần nhất; source chính có guard `check:encoding`, đã thêm icon nhận diện mới từ `public/it.png` cho favicon/logo và footer bản quyền TeamIT Gustino ở giao diện.
+6. Production Vercel `https://it-help-me.vercel.app` đã deploy lại bản icon/footer TeamIT Gustino; `public/it.png` đã được làm nền trong suốt và header/login không còn khung trắng quanh logo.
 
 ## VIỆC TIẾP THEO
 
@@ -43,7 +43,7 @@
 3. Cân nhắc chuyển xóa nhân viên IT sang soft delete hoặc ràng buộc nghiệp vụ rõ hơn.
 4. Không commit hoặc chia sẻ `.env`/`.env.local`; nếu lộ password DB/service key thì rotate trong Supabase và cập nhật lại Vercel env.
 5. Thêm migration workflow chính thức thay cho `prisma db push` khi schema bắt đầu ổn định.
-6. Nếu muốn icon/footer mới xuất hiện trên production, deploy lại Vercel sau khi kiểm tra giao diện local.
+6. Kiểm tra lại production trên trình duyệt; nếu favicon/logo còn bản cũ thì hard refresh hoặc xóa cache trình duyệt.
 
 ## BLOCKERS
 
@@ -52,6 +52,12 @@
 ---
 
 ## NHẬT KÝ SESSION
+
+### [2026-07-10] Session 25 - Codex
+- **Làm được:** Redeploy Vercel cho bản icon/footer mới; sau phản hồi icon còn nền trắng vuông, đã làm sạch `public/it.png` thành PNG nền trong suốt, crop bớt nền caro cũ, xóa khung trắng/padding/ring khỏi `BrandMark`, rồi deploy lại production.
+- **File thay đổi chính:** `components/portal-shell.tsx`, `public/it.png`, `05-WORKLOG.md`.
+- **Đã test:** `npm.cmd run build` thành công, bao gồm `check:encoding`; `npx.cmd vercel --prod` thành công với deployment cuối `dpl_5UunxueTNNZf5PwRBDw2vpAFr1du` và alias `https://it-help-me.vercel.app`; smoke test `curl.exe -I https://it-help-me.vercel.app/api/state` trả `200 OK`; tải `https://it-help-me.vercel.app/it.png` về kiểm tra `size=1134x1151`, `A00=0`, `length=620174`.
+- **Lưu ý/cảnh báo cho người sau:** Deployment trước đó trong cùng lượt là `dpl_C1qzpWxGYjSpqnYKEhkFXF2H74rP` nhưng đã bị supersede bởi `dpl_5UunxueTNNZf5PwRBDw2vpAFr1du`; nếu trình duyệt còn favicon cũ thì do cache.
 
 ### [2026-07-10] Session 24 - Codex
 - **Làm được:** Thêm icon TeamIT Gustino từ `public/it.png` vào metadata favicon/apple/shortcut icon, thay logo lucide cũ ở header dashboard và màn hình đăng nhập bằng ảnh icon mới, thêm footer bản quyền `© 2026 Bản quyền thuộc về TeamIT Gustino` và tagline `Team IT Gustino – Xử lý cực pro!` ở cuối giao diện đăng nhập/dashboard.
@@ -82,9 +88,3 @@
 - **File thay đổi chính:** `components/portal-shell.tsx`, `app/api/chat/route.ts`, `lib/prisma.ts`, `scripts/check-encoding.mjs`, `05-WORKLOG.md`.
 - **Đã test:** `npx.cmd prisma generate` thành công; `npm.cmd run check:encoding` thành công; smoke test local gửi `/api/chat` sau login IT thành công và trả ID tin nhắn; `npm.cmd run build` thành công; `npx.cmd vercel --prod` deploy production thành công và alias lại `https://it-help-me.vercel.app`; smoke test production `curl.exe -I https://it-help-me.vercel.app/api/state` trả `200 OK`.
 - **Lưu ý/cảnh báo cho người sau:** Smoke test có gửi một tin nhắn test vào phòng kế toán trên DB local/đang trỏ theo `.env`; production đã deploy ở `dpl_3jDtUVuz6suvCMfmNEnv5B6eQaym`.
-
-### [2026-07-09] Session 19 - Codex
-- **Làm được:** Sửa chữ nút `Đăng xuất` còn bị lỗi ký tự; mở rộng modal `Lịch sử` lên tối đa 1280px, tăng min-width bảng và thêm `whitespace-nowrap` cho header/cell/status/rating để nội dung lịch sử không tự xuống hàng; bổ sung guard encoding bắt thêm biến thể chữ E-macron gây lỗi.
-- **File thay đổi chính:** `components/portal-shell.tsx`, `scripts/check-encoding.mjs`, `05-WORKLOG.md`.
-- **Đã test:** `npm.cmd run check:encoding` thành công; `npm.cmd run build` thành công.
-- **Lưu ý/cảnh báo cho người sau:** Chưa deploy production trong session này; nếu viewport quá hẹp bảng lịch sử vẫn dùng thanh cuộn ngang, nhưng text trong từng ô không bị wrap.
