@@ -10,7 +10,6 @@ import {
   ClipboardList,
   Download,
   FileText,
-  HardDrive,
   History,
   Inbox,
   LayoutDashboard,
@@ -41,6 +40,9 @@ const LEGACY_IMPORT_KEY = "it-help-me-legacy-imported-v1";
 const SOUND_PREF_KEY = "it-help-me-notification-sound-v1";
 const SEED_REQUEST_IDS = new Set(["REQ-260707-001", "REQ-260707-002", "REQ-260706-014", "REQ-260705-009"]);
 const IT_POLL_INTERVAL_MS = 15000;
+const APP_ICON_SRC = "/it.png";
+const COPYRIGHT_TEXT = "© 2026 Bản quyền thuộc về TeamIT Gustino";
+const TEAM_TAGLINE = "Team IT Gustino – Xử lý cực pro!";
 
 type LoginSession = {
   role: Role;
@@ -1210,9 +1212,7 @@ export function PortalShell() {
           </div>
           <nav className="relative z-10 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-md bg-white/18 ring-1 ring-white/28">
-                <HardDrive size={20} />
-              </div>
+              <BrandMark className="size-12 bg-white/92 p-1.5 ring-white/35" imageClassName="size-9" />
               <div>
                 <p className="text-xl font-black tracking-wide">IT HELP ME!</p>
               </div>
@@ -1394,6 +1394,7 @@ export function PortalShell() {
         onRecall={handleRecallChat}
         onSubmit={handleSendChat}
       />
+      <AppFooter className="relative z-10 mx-auto mt-8 max-w-7xl" />
       <AppDialog dialog={dialog} onClose={closeDialog} />
       <LoadingOverlay isOpen={isApiBusy} message={apiBusyMessage} />
     </main>
@@ -1402,6 +1403,23 @@ export function PortalShell() {
 
 function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200/70 ${className}`}>{children}</div>;
+}
+
+function BrandMark({ className = "", imageClassName = "" }: { className?: string; imageClassName?: string }) {
+  return (
+    <span className={`flex shrink-0 items-center justify-center rounded-md shadow-sm ${className}`}>
+      <img className={`object-contain ${imageClassName}`} src={APP_ICON_SRC} alt="" aria-hidden="true" />
+    </span>
+  );
+}
+
+function AppFooter({ className = "" }: { className?: string }) {
+  return (
+    <footer className={`text-center text-xs font-black leading-5 text-slate-500 ${className}`}>
+      <p>{COPYRIGHT_TEXT}</p>
+      <p className="text-slate-700">{TEAM_TAGLINE}</p>
+    </footer>
+  );
 }
 
 function SectionTitle({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
@@ -1441,14 +1459,12 @@ function LoginScreen({
   const canSubmit = (loginRole === "IT" && Boolean(loginPassword)) || (loginRole === "DEPARTMENT" && Boolean(loginDepartmentId));
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
+    <main className="relative flex min-h-screen flex-col overflow-x-hidden bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[360px] hero-panel" />
-      <section className="relative mx-auto flex min-h-[calc(100vh-48px)] max-w-3xl items-center">
+      <section className="relative mx-auto flex w-full flex-1 items-center py-6 sm:max-w-3xl">
         <form className="w-full rounded-lg bg-white p-5 shadow-soft ring-1 ring-slate-200 sm:p-7" onSubmit={onSubmit}>
           <div className="mb-6 flex items-center gap-3">
-            <div className="flex size-12 items-center justify-center rounded-md bg-aqua text-white shadow-lg shadow-aqua/20">
-              <HardDrive size={24} />
-            </div>
+            <BrandMark className="size-14 bg-white p-2 ring-1 ring-aqua/20" imageClassName="size-10" />
             <div>
               <p className="text-2xl font-black tracking-wide text-slate-950">IT HELP ME!</p>
               <p className="mt-1 text-sm font-bold text-slate-500">Chọn tài khoản/phòng ban trước khi vào hệ thống.</p>
@@ -1542,6 +1558,7 @@ function LoginScreen({
           </button>
         </form>
       </section>
+      <AppFooter className="relative z-10 mx-auto w-full max-w-3xl" />
       <LoadingOverlay isOpen={isSubmitting} message="Đang đăng nhập..." />
     </main>
   );

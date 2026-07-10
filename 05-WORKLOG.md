@@ -34,7 +34,7 @@
 3. Đã có session cookie httpOnly ký HMAC và route protection backend: chưa login không thấy ticket; phòng ban chỉ xem/tạo/rating ticket của mình; IT mới quản trị danh mục, xử lý, xóa và import dữ liệu.
 4. Prisma schema PostgreSQL/Supabase đã có các model chính: `Department`, `ITStaff`, `Account`, `Request`, `RequestAttachment`, `RequestStatusHistory`, `ChatMessage`; enum `RequestStatus` có `NEW`, `ACCEPTED`, `IN_PROGRESS`, `DONE`, `REJECTED`.
 5. Runtime Prisma dùng `@prisma/adapter-pg`; `DATABASE_URL` được normalize thêm `uselibpqcompat=true` khi URL có `sslmode=require` để tránh lỗi SSL self-signed của `pg`.
-6. Production Vercel `https://it-help-me.vercel.app` đã deploy lại sau các fix UTF-8, login/chat, modal lịch sử, badge lịch sử, unread badge chat, thu hồi tin nhắn, giới hạn chat 1 ngày và lỗi textarea bị kẹt khi nhập dài; source chính có guard `check:encoding` chạy trước `next build`.
+6. Production Vercel `https://it-help-me.vercel.app` đang ở bản deploy sau các fix chat/UTF-8 gần nhất; source chính có guard `check:encoding`, đã thêm icon nhận diện mới từ `public/it.png` cho favicon/logo và footer bản quyền TeamIT Gustino ở giao diện.
 
 ## VIỆC TIẾP THEO
 
@@ -43,7 +43,7 @@
 3. Cân nhắc chuyển xóa nhân viên IT sang soft delete hoặc ràng buộc nghiệp vụ rõ hơn.
 4. Không commit hoặc chia sẻ `.env`/`.env.local`; nếu lộ password DB/service key thì rotate trong Supabase và cập nhật lại Vercel env.
 5. Thêm migration workflow chính thức thay cho `prisma db push` khi schema bắt đầu ổn định.
-6. Nếu có thêm thay đổi UI/API mới, build và deploy lại production Vercel.
+6. Nếu muốn icon/footer mới xuất hiện trên production, deploy lại Vercel sau khi kiểm tra giao diện local.
 
 ## BLOCKERS
 
@@ -52,6 +52,12 @@
 ---
 
 ## NHẬT KÝ SESSION
+
+### [2026-07-10] Session 24 - Codex
+- **Làm được:** Thêm icon TeamIT Gustino từ `public/it.png` vào metadata favicon/apple/shortcut icon, thay logo lucide cũ ở header dashboard và màn hình đăng nhập bằng ảnh icon mới, thêm footer bản quyền `© 2026 Bản quyền thuộc về TeamIT Gustino` và tagline `Team IT Gustino – Xử lý cực pro!` ở cuối giao diện đăng nhập/dashboard.
+- **File thay đổi chính:** `app/layout.tsx`, `components/portal-shell.tsx`, `public/it.png`, `05-WORKLOG.md`.
+- **Đã test:** `npm.cmd run build` thành công, bao gồm `npm run check:encoding`; chạy thử `npm.cmd run dev -- --hostname 127.0.0.1 --port 3000` lên `Ready` tại `http://127.0.0.1:3000` trong phiên trực tiếp.
+- **Lưu ý/cảnh báo cho người sau:** Chưa deploy production trong session này; dev server khi tách nền bằng `Start-Process` thoát sau khi log `Ready`, nên nếu cần xem live local hãy chạy lệnh dev trực tiếp trong terminal.
 
 ### [2026-07-09] Session 23 - Codex
 - **Làm được:** Sửa lỗi textarea `Nội dung` và `Ghi chú` bị kẹt khi nhập dài bằng `StableTextarea` hỗ trợ composition/bộ gõ tiếng Việt, chống reset draft khi polling cùng phiếu; sửa badge tin nhắn chưa đọc bằng cách trả thêm `chatUnreadByDepartment` từ server và hiển thị badge theo max server/client; giới hạn Prisma pg pool mỗi instance còn `max: 1` để tránh Supabase `EMAXCONNSESSION`; deploy lại production.
@@ -82,9 +88,3 @@
 - **File thay đổi chính:** `components/portal-shell.tsx`, `scripts/check-encoding.mjs`, `05-WORKLOG.md`.
 - **Đã test:** `npm.cmd run check:encoding` thành công; `npm.cmd run build` thành công.
 - **Lưu ý/cảnh báo cho người sau:** Chưa deploy production trong session này; nếu viewport quá hẹp bảng lịch sử vẫn dùng thanh cuộn ngang, nhưng text trong từng ô không bị wrap.
-
-### [2026-07-09] Session 18 - Codex
-- **Làm được:** Sửa lại toàn bộ chuỗi tiếng Việt bị mojibake trong `components/portal-shell.tsx`; thêm `.editorconfig` và script `check:encoding` chạy tự động trước build để chặn lỗi mã hóa tái diễn; làm `getAppState()` không làm sập login khi Prisma Client hoặc DB tạm thời chưa sẵn sàng cho model chat; chạy lại `prisma generate` để đồng bộ model `ChatMessage`.
-- **File thay đổi chính:** `.editorconfig`, `scripts/check-encoding.mjs`, `package.json`, `components/portal-shell.tsx`, `lib/server-data.ts`, `05-WORKLOG.md`.
-- **Đã test:** `npx.cmd prisma generate` thành công; `npm.cmd run check:encoding` thành công; `npm.cmd run build` thành công; smoke test local `/api/auth/login` thành công cho phòng ban và IT với mật khẩu mặc định local `123456`.
-- **Lưu ý/cảnh báo cho người sau:** Local hiện không thấy `IT_PASSWORD` trong `.env/.env.local` nên server dùng mặc định `123456`; nếu muốn đổi mật khẩu IT cần thêm env tương ứng ở local và Vercel. Chưa deploy production trong session này.

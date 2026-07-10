@@ -3,7 +3,12 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "IT Help Me!",
-  description: "Cổng hỗ trợ IT nội bộ cho phòng ban và đội IT"
+  description: "Cổng hỗ trợ IT nội bộ cho phòng ban và đội IT",
+  icons: {
+    icon: "/it.png",
+    shortcut: "/it.png",
+    apple: "/it.png"
+  }
 };
 
 export default function RootLayout({
