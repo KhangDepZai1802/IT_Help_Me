@@ -30,7 +30,7 @@
 ## TRẠNG THÁI HIỆN TẠI
 
 1. Đã khởi tạo Next.js App Router + TypeScript + Tailwind CSS cho MVP `IT Help Me!`.
-2. Giao diện dashboard tập trung vào các nghiệp vụ chính: gửi yêu cầu, Tickets, xử lý IT, thống kê, danh mục, lịch sử; đăng nhập vẫn giữ UX chọn phòng ban để vào, riêng IT nhập mật khẩu.
+2. Giao diện dashboard tập trung vào các nghiệp vụ chính: gửi yêu cầu, Tickets, xử lý IT, thống kê, danh mục, lịch sử; trang báo cáo ngày đã tăng tương phản chữ/placeholder sang gần đen để dễ đọc; đăng nhập vẫn giữ UX chọn phòng ban để vào, riêng IT nhập mật khẩu.
 3. Đã có session cookie httpOnly ký HMAC và route protection backend: chưa login không thấy ticket; phòng ban chỉ xem/tạo/rating ticket của mình; IT mới quản trị danh mục, xử lý, xóa và import dữ liệu.
 4. Prisma schema PostgreSQL/Supabase đã có các model helpdesk và `DailyReport`; migration history đã được baseline, migration tạo bảng báo cáo ngày đã áp dụng thành công.
 5. Runtime Prisma dùng `@prisma/adapter-pg`; `DATABASE_URL` được normalize thêm `uselibpqcompat=true` khi URL có `sslmode=require` để tránh lỗi SSL self-signed của `pg`.
@@ -43,7 +43,7 @@
 3. Cân nhắc chuyển xóa nhân viên IT sang soft delete hoặc ràng buộc nghiệp vụ rõ hơn.
 4. Không commit hoặc chia sẻ `.env`/`.env.local`; nếu lộ password DB/service key thì rotate trong Supabase và cập nhật lại Vercel env.
 5. Dùng `prisma migrate deploy` cho các thay đổi schema tiếp theo; ưu tiên cấu hình `DIRECT_URL` khi kết nối trực tiếp Supabase ổn định, hiện Prisma CLI có fallback sang `DATABASE_URL`.
-6. Ban Giám đốc/Quản lý IT rà soát báo cáo DOCX và chốt ưu tiên 0–60 ngày: tăng cường xác thực, validate workflow phía server, SLA/KPI và xuất `.xlsx` chuẩn.
+6. Redeploy production để đưa thay đổi tăng tương phản chữ của trang `/bao-cao-ngay` lên Vercel; sau đó Ban Giám đốc/Quản lý IT rà soát báo cáo DOCX và chốt ưu tiên 0–60 ngày.
 
 ## BLOCKERS
 
@@ -52,6 +52,12 @@
 ---
 
 ## NHẬT KÝ SESSION
+
+### [2026-07-15] Session 29 - Codex
+- **Làm được:** Tăng độ tương phản toàn bộ chữ trên trang `/bao-cao-ngay` và bản xuất ảnh: nhãn, mô tả, checklist, bảng, dữ liệu nhập chuyển sang `slate-900/950`; placeholder chuyển sang `slate-700` và đậm hơn; giữ nguyên chữ sáng trên nền tối, màu trạng thái và sao chưa chọn.
+- **File thay đổi chính:** `app/bao-cao-ngay/page.tsx`, `05-WORKLOG.md`.
+- **Đã test:** `npm.cmd run build` thành công, gồm kiểm tra encoding, TypeScript và 15 route.
+- **Lưu ý/cảnh báo cho người sau:** Chưa redeploy Vercel trong session này vì người dùng chỉ yêu cầu chỉnh giao diện; thay đổi DOCX đang có trong working tree là của người dùng/session khác và được giữ nguyên.
 
 ### [2026-07-15] Session 28 - Codex
 - **Làm được:** Rà commit mới pull `33e69f0`, sửa `prisma.config.ts` để ưu tiên `DIRECT_URL` nhưng fallback an toàn sang `DATABASE_URL`; baseline migration cho schema hiện hữu, áp dụng migration tạo `DailyReport`; cài dependency mới, build và redeploy Vercel production.
@@ -82,9 +88,3 @@
 - **File thay đổi chính:** `app/layout.tsx`, `components/portal-shell.tsx`, `public/it.png`, `05-WORKLOG.md`.
 - **Đã test:** `npm.cmd run build` thành công, bao gồm `npm run check:encoding`; chạy thử `npm.cmd run dev -- --hostname 127.0.0.1 --port 3000` lên `Ready` tại `http://127.0.0.1:3000` trong phiên trực tiếp.
 - **Lưu ý/cảnh báo cho người sau:** Chưa deploy production trong session này; dev server khi tách nền bằng `Start-Process` thoát sau khi log `Ready`, nên nếu cần xem live local hãy chạy lệnh dev trực tiếp trong terminal.
-
-### [2026-07-09] Session 23 - Codex
-- **Làm được:** Sửa lỗi textarea `Nội dung` và `Ghi chú` bị kẹt khi nhập dài bằng `StableTextarea` hỗ trợ composition/bộ gõ tiếng Việt, chống reset draft khi polling cùng phiếu; sửa badge tin nhắn chưa đọc bằng cách trả thêm `chatUnreadByDepartment` từ server và hiển thị badge theo max server/client; giới hạn Prisma pg pool mỗi instance còn `max: 1` để tránh Supabase `EMAXCONNSESSION`; deploy lại production.
-- **File thay đổi chính:** `components/portal-shell.tsx`, `lib/server-data.ts`, `lib/prisma.ts`, `05-WORKLOG.md`.
-- **Đã test:** `npm.cmd run check:encoding` thành công; `npm.cmd run build` thành công; `npx.cmd vercel --prod` deploy production thành công và alias lại `https://it-help-me.vercel.app`; smoke test production `curl.exe -I https://it-help-me.vercel.app/api/state` trả `200 OK`.
-- **Lưu ý/cảnh báo cho người sau:** Deployment mới `dpl_EAqu7LoZwHoCHZCgvSoNxsjqfXuU`; local smoke test API trước khi giới hạn pool từng gặp `EMAXCONNSESSION`, ưu tiên tránh để nhiều dev server/polling chạy song song.

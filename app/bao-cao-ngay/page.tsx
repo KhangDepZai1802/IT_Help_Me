@@ -209,7 +209,7 @@ function SectionCard({
         <span className="flex size-7 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">
           {number}
         </span>
-        <h2 className="text-sm font-black uppercase tracking-wide text-slate-800">
+        <h2 className="text-sm font-black uppercase tracking-wide text-slate-950">
           {title}
         </h2>
         {icon ? <span className="ml-auto text-aqua">{icon}</span> : null}
@@ -233,7 +233,7 @@ function LineInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full border-b border-dotted border-slate-300 bg-transparent py-1.5 text-sm font-semibold text-slate-800 outline-none placeholder:font-normal placeholder:text-slate-300 focus:border-aqua"
+      className="w-full border-b border-dotted border-slate-300 bg-transparent py-1.5 text-sm font-semibold text-slate-950 outline-none placeholder:font-semibold placeholder:text-slate-700 focus:border-aqua"
     />
   );
 }
@@ -248,7 +248,7 @@ function CheckboxRow({
   label: string;
 }) {
   return (
-    <label className="flex cursor-pointer items-start gap-2 text-xs font-semibold text-slate-600">
+    <label className="flex cursor-pointer items-start gap-2 text-xs font-semibold text-slate-950">
       <input
         type="checkbox"
         checked={checked}
@@ -296,7 +296,7 @@ function ExportSection({
     <section
       className={`rounded-2xl border border-slate-200 bg-white p-4 ${className}`}
     >
-      <h2 className="mb-2 text-[18px] font-black uppercase tracking-wide text-slate-700">
+      <h2 className="mb-2 text-[18px] font-black uppercase tracking-wide text-slate-950">
         {title}
       </h2>
       {children}
@@ -309,14 +309,14 @@ function ExportList({ items }: { items: string[] }) {
 
   if (!visibleItems.length) {
     return (
-      <p className="text-[16px] font-semibold italic text-slate-400">
+      <p className="text-[16px] font-semibold italic text-slate-900">
         Chưa có nội dung
       </p>
     );
   }
 
   return (
-    <ul className="list-disc space-y-1 pl-6 text-[17px] font-semibold leading-snug text-slate-700">
+    <ul className="list-disc space-y-1 pl-6 text-[17px] font-semibold leading-snug text-slate-950">
       {visibleItems.map((item, index) => (
         <li
           key={`${item}-${index}`}
@@ -393,13 +393,13 @@ const ReportExportCard = forwardRef<
       >
         <header className="mb-5 flex items-start justify-between gap-6 border-b-2 border-slate-200 pb-5">
           <div>
-            <p className="mb-1 text-[16px] font-black uppercase tracking-[0.22em] text-slate-400">
+            <p className="mb-1 text-[16px] font-black uppercase tracking-[0.22em] text-slate-900">
               Daily Report
             </p>
             <h1 className="text-[36px] font-black uppercase leading-none tracking-wide text-slate-900">
               Báo cáo ngày
             </h1>
-            <p className="mt-2 text-[17px] font-bold text-slate-500">
+            <p className="mt-2 text-[17px] font-bold text-slate-950">
               Learn • Apply • Deliver
             </p>
           </div>
@@ -422,8 +422,8 @@ const ReportExportCard = forwardRef<
             ["Team/Phòng ban", form.team],
             ["Dự án/Workspace", form.project],
           ].map(([label, value]) => (
-            <p key={label} className="min-w-0 break-words text-slate-700">
-              <span className="block text-[13px] font-black uppercase tracking-wide text-slate-400">
+            <p key={label} className="min-w-0 break-words text-slate-950">
+              <span className="block text-[13px] font-black uppercase tracking-wide text-slate-900">
                 {label}
               </span>
               <span className="font-bold">{value || "—"}</span>
@@ -436,7 +436,7 @@ const ReportExportCard = forwardRef<
             <ExportList items={form.learnedItems} />
             {learnedChecklistItems.length ? (
               <div className="mt-3 border-t border-dashed border-slate-200 pt-3">
-                <p className="mb-1 text-[13px] font-black uppercase tracking-wide text-slate-400">
+                <p className="mb-1 text-[13px] font-black uppercase tracking-wide text-slate-900">
                   Checklist đã chọn
                 </p>
                 <ExportList items={learnedChecklistItems} />
@@ -448,7 +448,7 @@ const ReportExportCard = forwardRef<
             <ExportList items={form.appliedItems} />
             {appliedChecklistItems.length ? (
               <div className="mt-3 border-t border-dashed border-slate-200 pt-3">
-                <p className="mb-1 text-[13px] font-black uppercase tracking-wide text-slate-400">
+                <p className="mb-1 text-[13px] font-black uppercase tracking-wide text-slate-900">
                   Checklist đã chọn
                 </p>
                 <ExportList items={appliedChecklistItems} />
@@ -462,7 +462,7 @@ const ReportExportCard = forwardRef<
             <div className="overflow-hidden rounded-xl border border-slate-200">
               <table className="w-full table-fixed border-collapse text-[14px] leading-snug">
                 <thead>
-                  <tr className="bg-slate-100 text-left text-[12px] font-black uppercase tracking-wide text-slate-500">
+                  <tr className="bg-slate-100 text-left text-[12px] font-black uppercase tracking-wide text-slate-950">
                     <th className="w-[38px] border-b border-r border-slate-200 px-2 py-2 text-center">
                       #
                     </th>
@@ -485,8 +485,8 @@ const ReportExportCard = forwardRef<
                 </thead>
                 <tbody>
                   {visibleTasks.map((task, index) => (
-                    <tr key={index} className="align-top text-slate-700">
-                      <td className="border-r border-t border-slate-200 px-2 py-2 text-center font-black text-slate-400">
+                    <tr key={index} className="align-top text-slate-950">
+                      <td className="border-r border-t border-slate-200 px-2 py-2 text-center font-black text-slate-900">
                         {index + 1}
                       </td>
                       <td className="whitespace-pre-wrap break-words border-r border-t border-slate-200 px-2 py-2 font-bold">
@@ -512,11 +512,11 @@ const ReportExportCard = forwardRef<
               </table>
             </div>
           ) : (
-            <p className="text-[16px] font-semibold italic text-slate-400">
+            <p className="text-[16px] font-semibold italic text-slate-900">
               Chưa có công việc
             </p>
           )}
-          <p className="mt-2 text-right text-[16px] font-black text-slate-700">
+          <p className="mt-2 text-right text-[16px] font-black text-slate-950">
             Tổng thời gian:{" "}
             <span className="text-slate-950">{totalHours || 0} giờ</span>
           </p>
@@ -529,10 +529,10 @@ const ReportExportCard = forwardRef<
                 key={field.key}
                 className="min-w-0 rounded-xl bg-slate-50 px-3 py-2"
               >
-                <p className="text-[12px] font-black uppercase leading-tight tracking-wide text-slate-400">
+                <p className="text-[12px] font-black uppercase leading-tight tracking-wide text-slate-900">
                   {field.label}
                 </p>
-                <p className="mt-1 whitespace-pre-wrap break-words text-[17px] font-black text-slate-700">
+                <p className="mt-1 whitespace-pre-wrap break-words text-[17px] font-black text-slate-950">
                   {form.achievements[field.key] || "—"}
                 </p>
               </div>
@@ -557,7 +557,7 @@ const ReportExportCard = forwardRef<
                   key={item.key}
                   className="flex items-center justify-between gap-4"
                 >
-                  <span className="text-[15px] font-bold text-slate-600">
+                  <span className="text-[15px] font-bold text-slate-950">
                     {item.label}
                   </span>
                   <ExportStars value={form.selfRating[item.key]} />
@@ -565,31 +565,31 @@ const ReportExportCard = forwardRef<
               ))}
             </div>
             <div className="mt-3 rounded-xl bg-slate-50 p-3">
-              <p className="mb-1 text-[12px] font-black uppercase tracking-wide text-slate-400">
+              <p className="mb-1 text-[12px] font-black uppercase tracking-wide text-slate-900">
                 Ghi chú tự đánh giá
               </p>
-              <p className="whitespace-pre-wrap break-words text-[16px] font-semibold leading-snug text-slate-700">
+              <p className="whitespace-pre-wrap break-words text-[16px] font-semibold leading-snug text-slate-950">
                 {form.selfNote || "—"}
               </p>
             </div>
           </ExportSection>
 
           <ExportSection title="8. Nhận xét Mentor">
-            <p className="whitespace-pre-wrap break-words text-[16px] font-semibold leading-snug text-slate-700">
+            <p className="whitespace-pre-wrap break-words text-[16px] font-semibold leading-snug text-slate-950">
               {form.mentorComment || "—"}
             </p>
             <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3">
               <div>
-                <p className="text-[12px] font-black uppercase tracking-wide text-slate-400">
+                <p className="text-[12px] font-black uppercase tracking-wide text-slate-900">
                   Đánh giá tổng thể
                 </p>
                 <ExportStars value={form.mentorOverallRating} />
               </div>
               <div>
-                <p className="text-[12px] font-black uppercase tracking-wide text-slate-400">
+                <p className="text-[12px] font-black uppercase tracking-wide text-slate-900">
                   Mentor ký tên
                 </p>
-                <p className="mt-1 break-words text-[17px] font-black text-slate-700">
+                <p className="mt-1 break-words text-[17px] font-black text-slate-950">
                   {form.mentorSignature || "—"}
                 </p>
               </div>
@@ -760,7 +760,7 @@ export default function InternDailyReportPage() {
         {/* ===== Header ===== */}
         <div className="flex flex-col gap-4 rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-md border border-slate-200 text-[10px] font-black uppercase text-slate-400">
+            <div className="flex h-14 w-14 items-center justify-center rounded-md border border-slate-200 text-[10px] font-black uppercase text-slate-900">
               LOGO
             </div>
             <div>
@@ -772,16 +772,16 @@ export default function InternDailyReportPage() {
           </div>
 
           <div className="rounded-md border border-slate-200 px-4 py-3">
-            <div className="mb-2 flex items-center gap-2 text-xs font-black text-slate-500">
+            <div className="mb-2 flex items-center gap-2 text-xs font-black text-slate-950">
               Ngày báo cáo:
               <input
                 type="date"
                 value={form.reportDate}
                 onChange={(e) => update("reportDate", e.target.value)}
-                className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-aqua"
+                className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-950 outline-none focus:border-aqua"
               />
             </div>
-            <div className="flex items-center gap-3 text-[11px] font-black text-slate-500">
+            <div className="flex items-center gap-3 text-[11px] font-black text-slate-950">
               {WEEKDAYS.map((day, index) => (
                 <span key={day} className="flex flex-col items-center gap-1">
                   {day}
@@ -801,7 +801,7 @@ export default function InternDailyReportPage() {
         {/* ===== Thông tin cá nhân ===== */}
         <div className="grid grid-cols-1 gap-4 rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:grid-cols-3">
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-slate-500">
+            <label className="mb-1 block text-xs font-black uppercase text-slate-950">
               Họ và tên
             </label>
             <LineInput
@@ -811,7 +811,7 @@ export default function InternDailyReportPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-slate-500">
+            <label className="mb-1 block text-xs font-black uppercase text-slate-950">
               Intern ID
             </label>
             <LineInput
@@ -821,7 +821,7 @@ export default function InternDailyReportPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-slate-500">
+            <label className="mb-1 block text-xs font-black uppercase text-slate-950">
               Người hướng dẫn (Mentor)
             </label>
             <LineInput
@@ -830,7 +830,7 @@ export default function InternDailyReportPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-slate-500">
+            <label className="mb-1 block text-xs font-black uppercase text-slate-950">
               Vị trí
             </label>
             <LineInput
@@ -839,13 +839,13 @@ export default function InternDailyReportPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-slate-500">
+            <label className="mb-1 block text-xs font-black uppercase text-slate-950">
               Team/Phòng ban
             </label>
             <LineInput value={form.team} onChange={(v) => update("team", v)} />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-slate-500">
+            <label className="mb-1 block text-xs font-black uppercase text-slate-950">
               Dự án/Workspace
             </label>
             <LineInput
@@ -858,7 +858,7 @@ export default function InternDailyReportPage() {
         {/* ===== Mục 1 & 2 ===== */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <SectionCard number={1} title="Hôm nay học gì?">
-            <p className="mb-3 text-xs font-semibold text-slate-500">
+            <p className="mb-3 text-xs font-semibold text-slate-950">
               Kiến thức, công cụ, quy trình mới học được hôm nay.
             </p>
             <div className="mb-4 space-y-2">
@@ -870,7 +870,7 @@ export default function InternDailyReportPage() {
                 />
               ))}
             </div>
-            <div className="mb-2 inline-block rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-500">
+            <div className="mb-2 inline-block rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-950">
               Checklist tham khảo
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -893,7 +893,7 @@ export default function InternDailyReportPage() {
                     onChange={() => toggleChecklist("learnedChecklist", label)}
                   />
                 ))}
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-950">
                   <span>Kiến thức khác:</span>
                   <LineInput
                     value={form.learnedOther}
@@ -909,7 +909,7 @@ export default function InternDailyReportPage() {
             title="Hôm nay thực hành – áp dụng gì?"
             icon={<Wrench size={18} />}
           >
-            <p className="mb-3 text-xs font-semibold text-slate-500">
+            <p className="mb-3 text-xs font-semibold text-slate-950">
               Nội dung đã thực hành, áp dụng kiến thức vào công việc.
             </p>
             <div className="mb-4 space-y-2">
@@ -921,7 +921,7 @@ export default function InternDailyReportPage() {
                 />
               ))}
             </div>
-            <div className="mb-2 inline-block rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-500">
+            <div className="mb-2 inline-block rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-950">
               Checklist tham khảo
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -944,7 +944,7 @@ export default function InternDailyReportPage() {
                     onChange={() => toggleChecklist("appliedChecklist", label)}
                   />
                 ))}
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-950">
                   <span>Thực hành khác:</span>
                   <LineInput
                     value={form.appliedOther}
@@ -958,12 +958,12 @@ export default function InternDailyReportPage() {
 
         {/* ===== Mục 3: bảng công việc ===== */}
         <SectionCard number={3} title="Hôm nay đã làm được những công việc gì?">
-          <p className="mb-3 text-xs font-semibold text-slate-500">
+          <p className="mb-3 text-xs font-semibold text-slate-950">
             Liệt kê các công việc/đầu việc đã hoàn thành trong ngày.
           </p>
           <div className="thin-scrollbar overflow-x-auto rounded-md border border-slate-200">
             <table className="w-full min-w-[880px] border-collapse text-left text-sm">
-              <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-500">
+              <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-950">
                 <tr>
                   <th className="border-b border-slate-200 px-3 py-2 w-10">
                     #
@@ -988,7 +988,7 @@ export default function InternDailyReportPage() {
               <tbody className="divide-y divide-slate-200">
                 {form.tasks.map((task, index) => (
                   <tr key={index}>
-                    <td className="px-3 py-2 font-black text-slate-400">
+                    <td className="px-3 py-2 font-black text-slate-900">
                       {index + 1}
                     </td>
                     <td className="px-3 py-2">
@@ -1026,7 +1026,7 @@ export default function InternDailyReportPage() {
                         {STATUS_OPTIONS.map((option) => (
                           <label
                             key={option.value}
-                            className="flex items-center gap-1.5 text-xs font-semibold text-slate-600"
+                            className="flex items-center gap-1.5 text-xs font-semibold text-slate-950"
                           >
                             <input
                               type="radio"
@@ -1050,7 +1050,7 @@ export default function InternDailyReportPage() {
               </tbody>
             </table>
           </div>
-          <div className="mt-3 flex justify-end text-xs font-black text-slate-600">
+          <div className="mt-3 flex justify-end text-xs font-black text-slate-950">
             Tổng thời gian làm việc:&nbsp;
             <span className="text-aqua">{totalHours || 0}</span>&nbsp;giờ
           </div>
@@ -1059,7 +1059,7 @@ export default function InternDailyReportPage() {
         {/* ===== Mục 4 & 5 ===== */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <SectionCard number={4} title="Kết quả đạt được">
-            <p className="mb-3 text-xs font-semibold text-slate-500">
+            <p className="mb-3 text-xs font-semibold text-slate-950">
               Những kết quả cụ thể/định lượng đạt được hôm nay (nếu có).
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1075,7 +1075,7 @@ export default function InternDailyReportPage() {
                   key={item.key}
                   className="rounded-md border border-slate-200 p-3"
                 >
-                  <p className="mb-1 text-xs font-black text-slate-600">
+                  <p className="mb-1 text-xs font-black text-slate-950">
                     {item.label}
                   </p>
                   <input
@@ -1091,13 +1091,13 @@ export default function InternDailyReportPage() {
                       })
                     }
                     placeholder="..........."
-                    className="w-full border-b border-dotted border-slate-300 bg-transparent py-1 text-sm font-semibold outline-none focus:border-aqua"
+                    className="w-full border-b border-dotted border-slate-300 bg-transparent py-1 text-sm font-semibold text-slate-950 outline-none placeholder:font-semibold placeholder:text-slate-700 focus:border-aqua"
                   />
                 </div>
               ))}
             </div>
             <div className="mt-3">
-              <label className="mb-1 block text-xs font-black text-slate-600">
+              <label className="mb-1 block text-xs font-black text-slate-950">
                 Khác (ghi rõ):
               </label>
               <LineInput
@@ -1111,7 +1111,7 @@ export default function InternDailyReportPage() {
 
           <div className="flex flex-col gap-4">
             <SectionCard number={5} title="Khó khăn / Vấn đề gặp phải">
-              <p className="mb-3 text-xs font-semibold text-slate-500">
+              <p className="mb-3 text-xs font-semibold text-slate-950">
                 Những khó khăn, lỗi, trở ngại trong quá trình làm việc.
               </p>
               <div className="space-y-2">
@@ -1129,13 +1129,13 @@ export default function InternDailyReportPage() {
               number={<Camera size={14} />}
               title="Kế hoạch ngày mai"
             >
-              <p className="mb-3 text-xs font-semibold text-slate-500">
+              <p className="mb-3 text-xs font-semibold text-slate-950">
                 Các công việc dự kiến sẽ thực hiện vào ngày mai.
               </p>
               <div className="space-y-2">
                 {form.planTomorrow.map((value, index) => (
                   <div key={index} className="flex items-center gap-2">
-                    <span className="text-xs font-black text-slate-400">
+                    <span className="text-xs font-black text-slate-900">
                       {index + 1}.
                     </span>
                     <LineInput
@@ -1159,7 +1159,7 @@ export default function InternDailyReportPage() {
                     key={item.key}
                     className="flex items-center justify-between gap-3"
                   >
-                    <span className="text-xs font-bold text-slate-600">
+                    <span className="text-xs font-bold text-slate-950">
                       {item.label}
                     </span>
                     <StarPicker
@@ -1175,14 +1175,14 @@ export default function InternDailyReportPage() {
                 ))}
               </div>
               <div className="rounded-md bg-emerald-50/60 p-3 ring-1 ring-emerald-100">
-                <label className="mb-1 block text-xs font-black text-slate-600">
+                <label className="mb-1 block text-xs font-black text-slate-950">
                   Ghi chú tự đánh giá:
                 </label>
                 <textarea
                   value={form.selfNote}
                   onChange={(e) => update("selfNote", e.target.value)}
                   rows={4}
-                  className="w-full resize-none rounded bg-transparent text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-300"
+                  className="w-full resize-none rounded bg-transparent text-sm font-semibold text-slate-950 outline-none placeholder:font-semibold placeholder:text-slate-700"
                   placeholder="Cảm nhận, tự nhận xét của bạn..."
                 />
               </div>
@@ -1190,19 +1190,19 @@ export default function InternDailyReportPage() {
           </SectionCard>
 
           <SectionCard number="👤" title="Nhận xét của Mentor">
-            <p className="mb-3 text-xs font-semibold text-slate-500">
+            <p className="mb-3 text-xs font-semibold text-slate-950">
               Nhận xét, góp ý và đánh giá của người hướng dẫn.
             </p>
             <textarea
               value={form.mentorComment}
               onChange={(e) => update("mentorComment", e.target.value)}
               rows={4}
-              className="mb-3 w-full resize-none rounded-md border border-slate-200 p-3 text-sm font-semibold text-slate-700 outline-none focus:border-aqua"
+              className="mb-3 w-full resize-none rounded-md border border-slate-200 p-3 text-sm font-semibold text-slate-950 outline-none placeholder:font-semibold placeholder:text-slate-700 focus:border-aqua"
               placeholder="Nhận xét của mentor..."
             />
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-slate-600">
+                <span className="text-xs font-black text-slate-950">
                   Đánh giá tổng thể:
                 </span>
                 <StarPicker
@@ -1211,7 +1211,7 @@ export default function InternDailyReportPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-slate-600">
+                <span className="text-xs font-black text-slate-950">
                   Mentor ký tên:
                 </span>
                 <LineInput
@@ -1245,7 +1245,7 @@ export default function InternDailyReportPage() {
             type="button"
             onClick={handleExportImage}
             disabled={isExporting}
-            className="flex h-11 items-center gap-2 rounded-md border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-11 items-center gap-2 rounded-md border border-slate-300 bg-white px-5 text-sm font-black text-slate-950 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isExporting ? (
               <Loader2 size={16} className="animate-spin" />
