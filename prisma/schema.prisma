@@ -94,7 +94,45 @@ model RequestStatusHistory {
   note        String?
   changedAt   DateTime       @default(now())
 }
+model DailyReport {
+  id           String   @id @default(uuid())
+  reportDate   DateTime
+  fullName     String
+  internId     String   @default("")
+  mentor       String   @default("")
+  position     String   @default("")
+  team         String   @default("")
+  project      String   @default("")
 
+  learnedItems     String[]
+  learnedChecklist Json     @default("{}")
+  learnedOther     String   @default("")
+
+  appliedItems     String[]
+  appliedChecklist Json     @default("{}")
+  appliedOther     String   @default("")
+
+  tasks Json @default("[]")
+
+  achievements Json @default("{}")
+
+  difficulties String[]
+  planTomorrow String[]
+
+  selfRating Json   @default("{}")
+  selfNote   String @default("")
+
+  mentorComment       String @default("")
+  mentorOverallRating Int    @default(0)
+  mentorSignature     String @default("")
+
+  totalHours Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([internId, reportDate])
+}
 model ChatMessage {
   id           String      @id @default(uuid())
   departmentId String

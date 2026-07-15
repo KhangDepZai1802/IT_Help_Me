@@ -5,9 +5,8 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
-    seed: "node prisma/seed.mjs"
   },
   datasource: {
-    url: env("DATABASE_URL")
-  }
+    url: env("DIRECT_URL"), // dùng URL trực tiếp (port 5432), không dùng pooler 6543
+  },
 });

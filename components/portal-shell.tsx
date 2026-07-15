@@ -3,6 +3,7 @@
 import {
   Bell,
   CalendarDays,
+  CalendarCheck2,   // 👈 thêm dòng này
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
@@ -34,7 +35,7 @@ import { FormEvent, ReactNode, TextareaHTMLAttributes, useCallback, useEffect, u
 import { priorityLabels, priorityTone, statusLabels, statusTone } from "@/lib/constants";
 import { initialDepartments, initialRequests, initialStaff } from "@/lib/sample-data";
 import type { ChatMessage, Department, ITRequest, ITStaff, Priority, Rating, RequestStatus, Role } from "@/lib/types";
-
+import Link from "next/link";
 const STORAGE_KEY = "it-help-me-state-v1";
 const LEGACY_IMPORT_KEY = "it-help-me-legacy-imported-v1";
 const SOUND_PREF_KEY = "it-help-me-notification-sound-v1";
@@ -1265,7 +1266,15 @@ export function PortalShell() {
                 <LogOut size={16} />
                 Đăng xuất
               </button>
+              <Link
+                href="/bao-cao-ngay"
+                className="flex h-10 items-center gap-2 rounded-md bg-white/16 px-3 text-sm font-extrabold text-white ring-1 ring-white/25 hover:bg-white/24"
+              >
+                <CalendarCheck2 size={16} />
+                Báo cáo ngày
+              </Link>
 
+<SoundToggle isOn={isNotificationSoundOn} onToggle={() => setIsNotificationSoundOn((current) => !current)} />
               <SoundToggle isOn={isNotificationSoundOn} onToggle={() => setIsNotificationSoundOn((current) => !current)} />
 
               <NotificationBell
