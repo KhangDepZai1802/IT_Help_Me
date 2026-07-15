@@ -32,9 +32,9 @@
 1. Đã khởi tạo Next.js App Router + TypeScript + Tailwind CSS cho MVP `IT Help Me!`.
 2. Giao diện dashboard tập trung vào các nghiệp vụ chính: gửi yêu cầu, Tickets, xử lý IT, thống kê, danh mục, lịch sử; đăng nhập vẫn giữ UX chọn phòng ban để vào, riêng IT nhập mật khẩu.
 3. Đã có session cookie httpOnly ký HMAC và route protection backend: chưa login không thấy ticket; phòng ban chỉ xem/tạo/rating ticket của mình; IT mới quản trị danh mục, xử lý, xóa và import dữ liệu.
-4. Prisma schema PostgreSQL/Supabase đã có các model chính: `Department`, `ITStaff`, `Account`, `Request`, `RequestAttachment`, `RequestStatusHistory`, `ChatMessage`; enum `RequestStatus` có `NEW`, `ACCEPTED`, `IN_PROGRESS`, `DONE`, `REJECTED`.
+4. Prisma schema PostgreSQL/Supabase đã có các model helpdesk và `DailyReport`; migration history đã được baseline, migration tạo bảng báo cáo ngày đã áp dụng thành công.
 5. Runtime Prisma dùng `@prisma/adapter-pg`; `DATABASE_URL` được normalize thêm `uselibpqcompat=true` khi URL có `sslmode=require` để tránh lỗi SSL self-signed của `pg`.
-6. Production Vercel `https://it-help-me.vercel.app` đã deploy lại bản icon/footer TeamIT Gustino; `public/it.png` đã được làm nền trong suốt và header/login không còn khung trắng quanh logo.
+6. Production Vercel `https://it-help-me.vercel.app` đã redeploy commit `33e69f0` ngày 2026-07-15, có trang `/bao-cao-ngay` và API `/api/daily-reports`; smoke test xác nhận app cùng kết nối DB hoạt động.
 
 ## VIỆC TIẾP THEO
 
@@ -42,8 +42,8 @@
 2. Xuất Excel server-side bằng `exceljs` hoặc `xlsx` nếu cần file `.xlsx` chuẩn thay vì CSV.
 3. Cân nhắc chuyển xóa nhân viên IT sang soft delete hoặc ràng buộc nghiệp vụ rõ hơn.
 4. Không commit hoặc chia sẻ `.env`/`.env.local`; nếu lộ password DB/service key thì rotate trong Supabase và cập nhật lại Vercel env.
-5. Thêm migration workflow chính thức thay cho `prisma db push` khi schema bắt đầu ổn định.
-6. Kiểm tra lại production trên trình duyệt; nếu favicon/logo còn bản cũ thì hard refresh hoặc xóa cache trình duyệt.
+5. Dùng `prisma migrate deploy` cho các thay đổi schema tiếp theo; ưu tiên cấu hình `DIRECT_URL` khi kết nối trực tiếp Supabase ổn định, hiện Prisma CLI có fallback sang `DATABASE_URL`.
+6. Ban Giám đốc/Quản lý IT rà soát báo cáo DOCX và chốt ưu tiên 0–60 ngày: tăng cường xác thực, validate workflow phía server, SLA/KPI và xuất `.xlsx` chuẩn.
 
 ## BLOCKERS
 
@@ -52,6 +52,24 @@
 ---
 
 ## NHẬT KÝ SESSION
+
+### [2026-07-15] Session 28 - Codex
+- **Làm được:** Rà commit mới pull `33e69f0`, sửa `prisma.config.ts` để ưu tiên `DIRECT_URL` nhưng fallback an toàn sang `DATABASE_URL`; baseline migration cho schema hiện hữu, áp dụng migration tạo `DailyReport`; cài dependency mới, build và redeploy Vercel production.
+- **File thay đổi chính:** `prisma.config.ts`, `05-WORKLOG.md`; Supabase thêm bảng/index `DailyReport` và lịch sử migration.
+- **Đã test:** `npx.cmd prisma generate` thành công; `prisma migrate diff` xác nhận chỉ thiếu bảng/index `DailyReport`; `prisma migrate deploy` thành công và `prisma migrate status` báo database up to date; `npm.cmd run build` thành công với 15 route; deployment `dpl_8a2DYCZx1eE8gUTXpsvFGyhJG2Yr` READY và alias domain chính; smoke test `/`, `/bao-cao-ngay`, `/api/auth/session`, `/api/daily-reports` đều HTTP 200.
+- **Lưu ý/cảnh báo cho người sau:** Migration đầu `20260714140652_nguyenphu` được đánh dấu baseline vì các bảng cũ đã tồn tại; migration `20260714144533_add_intern_daily_report` được áp dụng thực tế. Session làm theo yêu cầu redeploy sau khi pull, khác danh sách `VIỆC TIẾP THEO`; báo cáo DOCX từ Session 26 vẫn chưa commit.
+
+### [2026-07-15] Session 27 - Codex
+- **Làm được:** Kiểm tra chênh lệch schema giữa Supabase và Prisma, xác nhận không cần `db push`; build và redeploy bản hiện tại lên Vercel production, alias lại domain chính.
+- **File thay đổi chính:** `05-WORKLOG.md`; database không thay đổi vì schema đã đồng bộ.
+- **Đã test:** `npx.cmd prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code` báo `No difference detected`; `npm.cmd run build` thành công; Vercel build/deploy thành công tại `https://it-help-bqs9mn17t-thongdat.vercel.app` và alias `https://it-help-me.vercel.app`; smoke test production `/`, `/api/auth/session`, `/api/state` đều trả HTTP 200, API trả dữ liệu phòng ban từ Supabase.
+- **Lưu ý/cảnh báo cho người sau:** Deployment dùng Vercel region `iad1`; session này làm theo yêu cầu redeploy trực tiếp của người dùng, khác các mục tối ưu trong `VIỆC TIẾP THEO`; repo vẫn có báo cáo DOCX chưa commit từ Session 26.
+
+### [2026-07-11] Session 26 - Codex
+- **Làm được:** Rà toàn bộ tài liệu nghiệp vụ, workflow, schema, API và giao diện web hiện tại; lập báo cáo DOCX dành cho Ban Giám đốc, gồm tóm tắt điều hành, quy trình đầu-cuối, ma trận chức năng theo vai trò, dữ liệu/kiểm soát, giá trị quản trị, rủi ro và lộ trình ưu tiên.
+- **File thay đổi chính:** `docs/Bao_cao_Tong_quan_Quy_trinh_Nghiep_vu_IT_Help_Me.docx`, `05-WORKLOG.md`.
+- **Đã test:** Mở lại DOCX bằng `python-docx`, kiểm tra cấu trúc ZIP/XML, số đoạn/bảng, tiêu đề và chuỗi tiếng Việt trọng yếu; chạy `npm.cmd run build` theo quy định repository.
+- **Lưu ý/cảnh báo cho người sau:** Báo cáo phản ánh mã nguồn/tài liệu/worklog hiện hành, không chứa số liệu production thực tế và không phải báo cáo pentest; việc này khác danh sách `VIỆC TIẾP THEO` vì người dùng yêu cầu trực tiếp một báo cáo quản trị DOCX.
 
 ### [2026-07-10] Session 25 - Codex
 - **Làm được:** Redeploy Vercel cho bản icon/footer mới; sau phản hồi icon còn nền trắng vuông, đã làm sạch `public/it.png` thành PNG nền trong suốt, crop bớt nền caro cũ, xóa khung trắng/padding/ring khỏi `BrandMark`, rồi deploy lại production.
@@ -70,21 +88,3 @@
 - **File thay đổi chính:** `components/portal-shell.tsx`, `lib/server-data.ts`, `lib/prisma.ts`, `05-WORKLOG.md`.
 - **Đã test:** `npm.cmd run check:encoding` thành công; `npm.cmd run build` thành công; `npx.cmd vercel --prod` deploy production thành công và alias lại `https://it-help-me.vercel.app`; smoke test production `curl.exe -I https://it-help-me.vercel.app/api/state` trả `200 OK`.
 - **Lưu ý/cảnh báo cho người sau:** Deployment mới `dpl_EAqu7LoZwHoCHZCgvSoNxsjqfXuU`; local smoke test API trước khi giới hạn pool từng gặp `EMAXCONNSESSION`, ưu tiên tránh để nhiều dev server/polling chạy song song.
-
-### [2026-07-09] Session 22 - Codex
-- **Làm được:** Thêm nút thu hồi tin nhắn trong bubble chat của chính người gửi; thêm API `DELETE /api/chat` để thu hồi tin nhắn có kiểm tra quyền; lọc và dọn tin nhắn cũ hơn 24 giờ khi tải state/gửi/đánh dấu đã đọc; deploy lại production Vercel.
-- **File thay đổi chính:** `app/api/chat/route.ts`, `lib/server-data.ts`, `components/portal-shell.tsx`, `05-WORKLOG.md`.
-- **Đã test:** `npm.cmd run check:encoding` thành công; `npm.cmd run build` thành công; smoke test local gửi rồi thu hồi tin nhắn chat thành công; `npx.cmd vercel --prod` deploy production thành công và alias lại `https://it-help-me.vercel.app`; smoke test production `curl.exe -I https://it-help-me.vercel.app/api/state` trả `200 OK`.
-- **Lưu ý/cảnh báo cho người sau:** Deployment mới `dpl_4rqLHRECSeCTqRmEVGM3rcL2HFPN`; tin nhắn chat quá 24 giờ sẽ bị xóa khi có request state/chat.
-
-### [2026-07-09] Session 21 - Codex
-- **Làm được:** Xóa 1 tin nhắn smoke test chat có nội dung chứa `UUID fallback` khỏi DB; sửa badge tin nhắn chưa đọc bằng cách lưu thêm `chatUnreadCount` từ server state và hiển thị badge theo giá trị lớn hơn giữa server/client; khi mở đúng thread thì trừ unread count sau khi đánh dấu đã đọc; deploy lại production Vercel.
-- **File thay đổi chính:** `components/portal-shell.tsx`, `05-WORKLOG.md`.
-- **Đã test:** Script xóa test message báo `Deleted 1 test chat message(s).`; `npm.cmd run check:encoding` thành công; `npm.cmd run build` thành công; `npx.cmd vercel --prod` deploy production thành công và alias lại `https://it-help-me.vercel.app`; smoke test production `curl.exe -I https://it-help-me.vercel.app/api/state` trả `200 OK`.
-- **Lưu ý/cảnh báo cho người sau:** Deployment mới `dpl_CP1nbw6ovAtK3jcEhsa9jen23ooG`; vẫn còn latency do Vercel function ở `iad1` xa Supabase.
-
-### [2026-07-09] Session 20 - Codex
-- **Làm được:** Sửa tiếp chữ nút modal thông báo `Đã hiểu` và một chuỗi `Không thể` còn bị lỗi dấu; bổ sung guard encoding bắt các từ hỏng cụ thể; sửa lỗi gửi chat khi dev server giữ Prisma Client cũ bằng cách tái tạo client stale và thêm fallback raw SQL có UUID cho `/api/chat`; ẩn badge nhắc đánh giá trên nút `Xem lịch sử` khi đang ở giao diện IT, chỉ hiện cho phòng ban.
-- **File thay đổi chính:** `components/portal-shell.tsx`, `app/api/chat/route.ts`, `lib/prisma.ts`, `scripts/check-encoding.mjs`, `05-WORKLOG.md`.
-- **Đã test:** `npx.cmd prisma generate` thành công; `npm.cmd run check:encoding` thành công; smoke test local gửi `/api/chat` sau login IT thành công và trả ID tin nhắn; `npm.cmd run build` thành công; `npx.cmd vercel --prod` deploy production thành công và alias lại `https://it-help-me.vercel.app`; smoke test production `curl.exe -I https://it-help-me.vercel.app/api/state` trả `200 OK`.
-- **Lưu ý/cảnh báo cho người sau:** Smoke test có gửi một tin nhắn test vào phòng kế toán trên DB local/đang trỏ theo `.env`; production đã deploy ở `dpl_3jDtUVuz6suvCMfmNEnv5B6eQaym`.
