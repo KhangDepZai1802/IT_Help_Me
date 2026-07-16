@@ -1,665 +1,737 @@
 "use client";
 
-import { forwardRef, useMemo, useRef, useState, type ReactNode } from "react";
-import { Loader2, Save, Star, Wrench, Camera, Download } from "lucide-react";
-import { toPng } from "html-to-image";
+import {
+  forwardRef,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { flushSync } from "react-dom";
+import {
+  ClipboardList,
+  CalendarDays,
+  CheckCircle2,
+  Loader2,
+  AlertCircle,
+  HelpCircle,
+  UserRound,
+  TrendingUp,
+  Sparkles,
+  Plus,
+  Trash2,
+  Save,
+  Download,
+} from "lucide-react";
+import { toBlob } from "html-to-image";
+
 /* ============================================================
- * Types — di chuyển sang @/lib/types nếu bạn muốn dùng chung
+ * Types
  * ============================================================ */
 
-type TaskStatus = "done" | "inprogress" | "notdone";
+type TaskStatus = "pending" | "inprogress" | "done";
 
-type TaskRow = {
-  task: string;
+type PriorityTask = {
+  id: string;
+  project: string;
+  category: string;
   description: string;
-  result: string;
-  hours: string;
-  status: TaskStatus | null;
+  due: string; // yyyy-mm-dd
+  owner: string;
+  status: TaskStatus;
 };
 
-type SelfRatingKey =
-  "understanding" | "practice" | "performance" | "initiative";
+type FollowupTask = {
+  id: string;
+  content: string;
+  project: string;
+  due: string; // yyyy-mm-dd
+  support: string;
+  status: TaskStatus;
+};
 
 type ReportForm = {
   reportDate: string; // yyyy-mm-dd
-  fullName: string;
-  internId: string;
-  mentor: string;
-  position: string;
-  team: string;
-  project: string;
-
-  learnedItems: string[]; // mục 1 — 3 dòng
-  learnedChecklist: Record<string, boolean>;
-  learnedOther: string;
-
-  appliedItems: string[]; // mục 2 — 3 dòng
-  appliedChecklist: Record<string, boolean>;
-  appliedOther: string;
-
-  tasks: TaskRow[]; // mục 3 — 5 dòng
-
-  achievements: {
-    workflowCount: string;
-    chatbotCount: string;
-    landingCount: string;
-    contentCount: string;
-    dataCount: string;
-    fixCount: string;
-    other: string;
-  };
-
-  difficulties: string[]; // mục 5 — 2 dòng
-  planTomorrow: string[]; // 3 dòng
-
-  selfRating: Record<SelfRatingKey, number>;
-  selfNote: string;
-
-  mentorComment: string;
-  mentorOverallRating: number;
-  mentorSignature: string;
+  companyName: string;
+  subtitle: string;
+  recipient: string;
+  intro: string;
+  priorityTasks: PriorityTask[];
+  followupTasks: FollowupTask[];
+  notes: string[];
+  owner: string;
 };
 
-const WEEKDAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"] as const;
+/* ============================================================
+ * Constants
+ * ============================================================ */
 
-const LEARNED_CHECKLIST_LEFT = [
-  "Học các khóa học N8N (workflow)",
-  "Học về tự động hóa workflow",
-  "Học cách tạo bot chat (Chatbot AI, Messenger Bot)",
-  "Tìm hiểu về tích hợp API",
-  "Tìm hiểu quy trình hỗ trợ kỹ thuật",
+const WEEKDAY_LABELS = [
+  "Chủ nhật",
+  "Thứ 2",
+  "Thứ 3",
+  "Thứ 4",
+  "Thứ 5",
+  "Thứ 6",
+  "Thứ 7",
 ];
 
-const LEARNED_CHECKLIST_RIGHT = [
-  "Học về kiến thức xây dựng và quản lý cộng đồng Fanpage",
-  "Học về CRM/AMIS",
-  "Thiết lập website/landing page",
-  "Tìm hiểu quy trình vận hành bán hàng",
+const STATUS_META: Record<
+  TaskStatus,
+  { label: string; badge: string; dot: string }
+> = {
+  pending: { label: "Chưa thực hiện", badge: "bg-rose-700 text-white", dot: "bg-rose-600" },
+  inprogress: { label: "Đang thực hiện", badge: "bg-amber-500 text-emerald-950", dot: "bg-amber-500" },
+  done: { label: "Đã hoàn thành", badge: "bg-emerald-700 text-white", dot: "bg-emerald-600" },
+};
+
+const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
+  { value: "pending", label: "Chưa thực hiện" },
+  { value: "inprogress", label: "Đang thực hiện" },
+  { value: "done", label: "Đã hoàn thành" },
 ];
 
-const APPLIED_CHECKLIST_LEFT = [
-  "Tạo workflow tự động trên N8N",
-  "Tạo chatbot / automation",
-  "Tích hợp API / kết nối hệ thống",
-  "Thiết lập kịch bản tự động",
-  "Thực hành nhập liệu và vận hành CRM/AMIS",
-];
+const STAT_TONES = {
+  green: { ring: "ring-emerald-800/10", icon: "bg-emerald-800 text-white" },
+  gold: { ring: "ring-amber-500/10", icon: "bg-amber-500 text-white" },
+  red: { ring: "ring-rose-700/10", icon: "bg-rose-700 text-white" },
+  gray: { ring: "ring-slate-400/10", icon: "bg-slate-400 text-white" },
+} as const;
 
-const APPLIED_CHECKLIST_RIGHT = [
-  "Tạo nội dung & quản lý bài đăng Fanpage",
-  "Thiết kế landing page/website",
-  "Kết nối N8N với công cụ khác (Google Sheets, CRM, Telegram...)",
-];
+/* ============================================================
+ * Helpers
+ * ============================================================ */
 
-const STATUS_OPTIONS: { value: TaskStatus; label: string; dot: string }[] = [
-  { value: "done", label: "Hoàn thành", dot: "bg-emerald-500" },
-  { value: "inprogress", label: "Đang làm", dot: "bg-amber-500" },
-  { value: "notdone", label: "Chưa xong", dot: "bg-rose-500" },
-];
+let idCounter = 0;
+function uid(prefix: string) {
+  idCounter += 1;
+  return `${prefix}-${Date.now()}-${idCounter}`;
+}
 
-const SELF_RATING_LABELS: { key: SelfRatingKey; label: string }[] = [
-  { key: "understanding", label: "Hiểu bài / Kiến thức" },
-  { key: "practice", label: "Thực hành / Ứng dụng" },
-  { key: "performance", label: "Hiệu suất làm việc" },
-  { key: "initiative", label: "Mức độ chủ động" },
-];
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+// Parse "yyyy-mm-dd" as LOCAL date parts (tránh lỗi lệch ngày do
+// new Date("yyyy-mm-dd") bị trình duyệt hiểu là UTC midnight).
+function parseYMD(dateStr: string) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return { y, m, d };
+}
+
+function formatDateDisplay(dateStr: string) {
+  if (!dateStr) return "";
+  const { y, m, d } = parseYMD(dateStr);
+  if (!y || !m || !d) return "";
+  return `${pad2(d)}/${pad2(m)}/${y}`;
+}
+
+function weekdayLabel(dateStr: string) {
+  if (!dateStr) return "";
+  const { y, m, d } = parseYMD(dateStr);
+  if (!y || !m || !d) return "";
+  return WEEKDAY_LABELS[new Date(y, m - 1, d).getDay()];
+}
+
+function todayISO() {
+  const now = new Date();
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+}
 
 function emptyForm(): ReportForm {
+  const today = todayISO();
   return {
-    reportDate: new Date().toISOString().slice(0, 10),
-    fullName: "",
-    internId: "",
-    mentor: "",
-    position: "",
-    team: "",
-    project: "",
-
-    learnedItems: ["", "", ""],
-    learnedChecklist: {},
-    learnedOther: "",
-
-    appliedItems: ["", "", ""],
-    appliedChecklist: {},
-    appliedOther: "",
-
-    tasks: Array.from({ length: 5 }, () => ({
-      task: "",
-      description: "",
-      result: "",
-      hours: "",
-      status: null,
-    })),
-
-    achievements: {
-      workflowCount: "",
-      chatbotCount: "",
-      landingCount: "",
-      contentCount: "",
-      dataCount: "",
-      fixCount: "",
-      other: "",
-    },
-
-    difficulties: ["", ""],
-    planTomorrow: ["", "", ""],
-
-    selfRating: {
-      understanding: 0,
-      practice: 0,
-      performance: 0,
-      initiative: 0,
-    },
-    selfNote: "",
-
-    mentorComment: "",
-    mentorOverallRating: 0,
-    mentorSignature: "",
+    reportDate: today,
+    companyName: "Thống Đạt Group",
+    subtitle: "Các mục công việc cần làm hôm nay",
+    recipient: "",
+    intro:
+      "Dưới đây là các hạng mục công việc cần theo dõi và triển khai trong ngày hôm nay.",
+    priorityTasks: [
+      {
+        id: uid("p"),
+        project: "",
+        category: "",
+        description: "",
+        due: today,
+        owner: "",
+        status: "inprogress",
+      },
+    ],
+    followupTasks: [
+      {
+        id: uid("f"),
+        content: "",
+        project: "",
+        due: today,
+        support: "-",
+        status: "pending",
+      },
+    ],
+    notes: [""],
+    owner: "",
   };
 }
 
-function weekdayIndex(dateStr: string) {
-  // Chuyển Chủ nhật (0) -> vị trí cuối (CN), Thứ 2 (1) -> vị trí đầu (T2)
-  const jsDay = new Date(dateStr).getDay();
-  return jsDay === 0 ? 6 : jsDay - 1;
-}
+/* ============================================================
+ * Small form atoms
+ * ============================================================ */
 
-function StarPicker({
-  value,
-  onChange,
-  size = 18,
-}: {
-  value: number;
-  onChange: (next: number) => void;
-  size?: number;
-}) {
+function FieldLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          type="button"
-          onClick={() => onChange(n === value ? 0 : n)}
-          aria-label={`${n} sao`}
-          className="text-slate-300 transition hover:scale-110 hover:text-amber-400"
-        >
-          <Star
-            size={size}
-            className={n <= value ? "fill-amber-400 text-amber-400" : ""}
-          />
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function SectionCard({
-  number,
-  title,
-  icon,
-  children,
-}: {
-  number: string | number | ReactNode;
-  title: string;
-  icon?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200">
-      <div className="mb-4 flex items-center gap-2">
-        <span className="flex size-7 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">
-          {number}
-        </span>
-        <h2 className="text-sm font-black uppercase tracking-wide text-slate-800">
-          {title}
-        </h2>
-        {icon ? <span className="ml-auto text-aqua">{icon}</span> : null}
-      </div>
+    <label className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-400">
       {children}
-    </div>
+    </label>
   );
 }
 
-function LineInput({
+function TextField({
   value,
   onChange,
   placeholder,
+  className = "",
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  className?: string;
 }) {
   return (
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full border-b border-dotted border-slate-300 bg-transparent py-1.5 text-sm font-semibold text-slate-800 outline-none placeholder:font-normal placeholder:text-slate-300 focus:border-aqua"
+      className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none placeholder:font-normal placeholder:text-slate-300 focus:border-emerald-600 ${className}`}
     />
   );
 }
 
-function CheckboxRow({
-  checked,
+function TextAreaField({
+  value,
   onChange,
-  label,
+  placeholder,
+  rows = 2,
 }: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  rows?: number;
 }) {
   return (
-    <label className="flex cursor-pointer items-start gap-2 text-xs font-semibold text-slate-600">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 size-3.5 shrink-0 rounded border-slate-300 text-aqua focus:ring-aqua"
-      />
-      <span>{label}</span>
-    </label>
+    <textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={rows}
+      className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none placeholder:font-normal placeholder:text-slate-300 focus:border-emerald-600"
+    />
+  );
+}
+
+function DateField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <input
+      type="date"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-emerald-600 [color-scheme:light]"
+    />
+  );
+}
+
+function StatusSelect({
+  value,
+  onChange,
+}: {
+  value: TaskStatus;
+  onChange: (v: TaskStatus) => void;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value as TaskStatus)}
+      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-emerald-600"
+    >
+      {STATUS_OPTIONS.map((opt) => (
+        <option key={opt.value} value={opt.value}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function RemoveRowButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-rose-200 text-rose-600 transition hover:bg-rose-50"
+    >
+      <Trash2 size={15} />
+    </button>
+  );
+}
+
+function AddRowButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-1.5 rounded-lg border border-dashed border-emerald-300 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-50"
+    >
+      <Plus size={14} />
+      {label}
+    </button>
+  );
+}
+
+function FormSection({
+  number,
+  title,
+  children,
+}: {
+  number: string | number;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200 sm:p-5">
+      <div className="mb-4 flex items-stretch overflow-hidden rounded-lg">
+        <div className="flex w-11 shrink-0 items-center justify-center bg-amber-500">
+          <span className="text-lg font-black text-emerald-950">{number}</span>
+        </div>
+        <div
+          className="flex flex-1 items-center bg-gradient-to-r from-emerald-950 to-emerald-800 px-4 py-2"
+          style={{ clipPath: "polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%)" }}
+        >
+          <span className="text-xs font-black uppercase tracking-wider text-white">
+            {title}
+          </span>
+        </div>
+      </div>
+      {children}
+    </div>
   );
 }
 
 /* ============================================================
- * ReportExportCard — ảnh dọc 9:16, tự co toàn bộ nội dung
+ * Export-only presentational atoms (dùng trong ảnh xuất ra)
  * ============================================================ */
 
-const EXPORT_IMAGE_WIDTH = 1080;
-const EXPORT_IMAGE_HEIGHT = 1920;
-const EXPORT_IMAGE_PADDING = 10;
-const EXPORT_CONTENT_WIDTH = EXPORT_IMAGE_WIDTH - EXPORT_IMAGE_PADDING * 2;
-const EXPORT_CONTENT_HEIGHT = EXPORT_IMAGE_HEIGHT - EXPORT_IMAGE_PADDING * 2;
-
-const ACHIEVEMENT_EXPORT_FIELDS: {
-  key: keyof ReportForm["achievements"];
-  label: string;
-}[] = [
-  { key: "workflowCount", label: "Workflow tạo mới" },
-  { key: "chatbotCount", label: "Chatbot / Automation" },
-  { key: "landingCount", label: "Landing page / Website" },
-  { key: "contentCount", label: "Bài viết / Nội dung" },
-  { key: "dataCount", label: "Dữ liệu nhập / CRM" },
-  { key: "fixCount", label: "Lỗi fix / Cải tiến" },
-  { key: "other", label: "Kết quả khác" },
-];
-
-function ExportSection({
-  title,
-  children,
-  className = "",
+function ExportStatCard({
+  label,
+  value,
+  Icon,
+  tone,
 }: {
-  title: string;
-  children: ReactNode;
-  className?: string;
+  label: string;
+  value: number;
+  Icon: typeof ClipboardList;
+  tone: keyof typeof STAT_TONES;
 }) {
+  const t = STAT_TONES[tone];
   return (
-    <section
-      className={`rounded-2xl border border-slate-200 bg-white p-4 ${className}`}
+    <div className={`flex flex-col items-center gap-2 rounded-xl bg-white px-3 py-4 ring-1 ${t.ring}`}>
+      <span className={`flex size-11 items-center justify-center rounded-full ${t.icon}`}>
+        <Icon size={20} strokeWidth={2.4} />
+      </span>
+      <span className="text-3xl font-black text-slate-900 tabular-nums">{value}</span>
+      <span className="text-center text-[11px] font-bold leading-tight text-slate-500">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function ExportRibbon({ number, title }: { number: number; title: string }) {
+  return (
+    <div className="flex items-stretch overflow-hidden rounded-lg">
+      <div className="flex w-12 shrink-0 items-center justify-center bg-amber-500">
+        <span className="text-2xl font-black text-emerald-950">{number}</span>
+      </div>
+      <div
+        className="flex flex-1 items-center bg-gradient-to-r from-emerald-950 to-emerald-800 px-4 py-2.5"
+        style={{ clipPath: "polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%)" }}
+      >
+        <span className="text-sm font-black uppercase tracking-wider text-white">{title}</span>
+      </div>
+    </div>
+  );
+}
+
+function ExportBadge({ status }: { status: TaskStatus }) {
+  const meta = STATUS_META[status];
+  return (
+    <span
+      className={`inline-flex w-full items-center justify-center rounded-lg px-3 py-2 text-center text-xs font-black leading-tight ${meta.badge}`}
     >
-      <h2 className="mb-2 text-[18px] font-black uppercase tracking-wide text-slate-700">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-function ExportList({ items }: { items: string[] }) {
-  const visibleItems = items.map((item) => item.trim()).filter(Boolean);
-
-  if (!visibleItems.length) {
-    return (
-      <p className="text-[16px] font-semibold italic text-slate-400">
-        Chưa có nội dung
-      </p>
-    );
-  }
-
-  return (
-    <ul className="list-disc space-y-1 pl-6 text-[17px] font-semibold leading-snug text-slate-700">
-      {visibleItems.map((item, index) => (
-        <li
-          key={`${item}-${index}`}
-          className="whitespace-pre-wrap break-words"
-        >
-          {item}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function ExportStars({ value }: { value: number }) {
-  const safeValue = Math.max(0, Math.min(5, value));
-  return (
-    <span className="whitespace-nowrap text-[20px] tracking-wide text-amber-500">
-      {"★".repeat(safeValue)}
-      <span className="text-slate-300">{"☆".repeat(5 - safeValue)}</span>
+      {meta.label}
     </span>
   );
 }
 
+function ExportPriorityCard({ index, task }: { index: number; task: PriorityTask }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-xl bg-white p-4 ring-1 ring-slate-200 sm:flex-row sm:items-center sm:gap-4">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-base font-black text-white">
+        {index}
+      </span>
+      <div className="min-w-0 flex-1 sm:basis-[220px] sm:flex-none">
+        <p className="text-base font-black text-emerald-900">{task.project || "—"}</p>
+        <p className="text-sm font-semibold italic text-slate-400">{task.category || "—"}</p>
+      </div>
+      <div className="min-w-0 flex-1 text-sm font-semibold text-slate-600">
+        {task.description || "—"}
+      </div>
+      <div className="flex shrink-0 flex-col gap-1.5 text-sm font-semibold text-slate-600 sm:w-56">
+        <span className="flex items-center gap-2">
+          <CalendarDays size={15} className="text-emerald-800" />
+          Hạn: <span className="font-black text-rose-600">{formatDateDisplay(task.due) || "—"}</span>
+        </span>
+        <span className="flex items-center gap-2">
+          <UserRound size={15} className="text-emerald-800" />
+          Phụ trách: <span className="font-bold text-slate-800">{task.owner || "—"}</span>
+        </span>
+      </div>
+      <div className="shrink-0 sm:w-28">
+        <ExportBadge status={task.status} />
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+ * Export card — bản render off-screen, dùng để chụp ảnh PNG
+ * ============================================================ */
+
+const EXPORT_IMAGE_WIDTH = 1080;
+const EXPORT_IMAGE_PADDING = 10;
+const EXPORT_CONTENT_WIDTH = EXPORT_IMAGE_WIDTH - EXPORT_IMAGE_PADDING * 2;
+
 const ReportExportCard = forwardRef<
   HTMLDivElement,
-  {
-    form: ReportForm;
-    totalHours: number;
-    contentRef: { current: HTMLDivElement | null };
-  }
->(function ReportExportCard({ form, totalHours, contentRef }, ref) {
-  const learnedChecklistItems = [
-    ...Object.entries(form.learnedChecklist)
-      .filter(([, checked]) => checked)
-      .map(([label]) => label),
-    ...(form.learnedOther.trim()
-      ? [`Kiến thức khác: ${form.learnedOther.trim()}`]
-      : []),
-  ];
+  { form: ReportForm; contentRef: { current: HTMLDivElement | null } }
+>(function ReportExportCard({ form, contentRef }, ref) {
+  const today = {
+    weekday: weekdayLabel(form.reportDate),
+    dateStr: formatDateDisplay(form.reportDate),
+  };
 
-  const appliedChecklistItems = [
-    ...Object.entries(form.appliedChecklist)
-      .filter(([, checked]) => checked)
-      .map(([label]) => label),
-    ...(form.appliedOther.trim()
-      ? [`Thực hành khác: ${form.appliedOther.trim()}`]
-      : []),
-  ];
+  const allTasks = [...form.priorityTasks, ...form.followupTasks];
+  const count = (status: TaskStatus) =>
+    allTasks.filter((t) => t.status === status).length;
 
-  const visibleTasks = form.tasks.filter(
-    (task) =>
-      task.task.trim() ||
-      task.description.trim() ||
-      task.result.trim() ||
-      task.hours.trim() ||
-      task.status,
+  const stats = {
+    total: allTasks.length,
+    dueToday: allTasks.length,
+    done: count("done"),
+    inprogress: count("inprogress"),
+    pending: count("pending"),
+  };
+
+  const visibleNotes = form.notes.map((n) => n.trim()).filter(Boolean);
+  const visibleFollowups = form.followupTasks.filter(
+    (t) => t.content.trim() || t.project.trim(),
   );
 
   return (
     <div
       ref={ref}
-      style={{ width: EXPORT_IMAGE_WIDTH, height: EXPORT_IMAGE_HEIGHT }}
-      className="relative overflow-hidden bg-slate-100 text-slate-900"
+      style={{ width: EXPORT_IMAGE_WIDTH }}
+      className="relative overflow-hidden bg-slate-100"
     >
       <div
         ref={contentRef}
         style={{
           width: EXPORT_CONTENT_WIDTH,
-          minHeight: EXPORT_CONTENT_HEIGHT,
           left: EXPORT_IMAGE_PADDING,
           top: EXPORT_IMAGE_PADDING,
-          transformOrigin: "top left",
         }}
-        className="absolute flex flex-col justify-between rounded-[30px] bg-white p-8 shadow-sm"
+        className="relative overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200"
       >
-        <header className="mb-5 flex items-start justify-between gap-6 border-b-2 border-slate-200 pb-5">
-          <div>
-            <p className="mb-1 text-[16px] font-black uppercase tracking-[0.22em] text-slate-400">
-              Daily Report
-            </p>
-            <h1 className="text-[36px] font-black uppercase leading-none tracking-wide text-slate-900">
-              Báo cáo ngày
-            </h1>
-            <p className="mt-2 text-[17px] font-bold text-slate-500">
-              Learn • Apply • Deliver
-            </p>
-          </div>
-          <div className="rounded-2xl bg-slate-900 px-5 py-3 text-right text-white">
-            <p className="text-[13px] font-black uppercase tracking-wider text-slate-300">
-              Ngày báo cáo
-            </p>
-            <p className="mt-1 text-[22px] font-black">
-              {form.reportDate || "—"}
-            </p>
+        {/* Header */}
+        <header className="relative overflow-hidden bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-800 px-9 py-8">
+          <div
+            className="pointer-events-none absolute right-9 top-5 h-16 w-24 opacity-40"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle, rgba(255,255,255,0.5) 1.4px, transparent 1.4px)",
+              backgroundSize: "10px 10px",
+            }}
+          />
+          <span className="absolute right-9 top-6 flex size-14 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-white/20">
+            <TrendingUp size={26} />
+          </span>
+
+          <div className="flex items-end justify-between gap-4">
+            <div className="max-w-lg">
+              <p className="mb-3 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.3em] text-amber-400">
+                {form.companyName || "Báo cáo"}
+                <span className="text-amber-400/60">•</span>
+                <span className="text-white/70">Báo cáo công việc</span>
+              </p>
+              <h1 className="text-5xl font-black uppercase leading-[1.05] tracking-tight text-white">
+                Báo cáo
+                <br />
+                đầu ngày
+              </h1>
+              <p className="mt-2 text-sm font-bold uppercase tracking-wide text-emerald-200/80">
+                {form.subtitle}
+              </p>
+              <div className="mt-4 flex items-center gap-3">
+                <span className="h-px w-16 bg-amber-400/70" />
+                <Sparkles size={14} className="text-amber-400" />
+                <span className="h-px w-16 bg-amber-400/70" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 rounded-xl bg-amber-500 px-4 py-3 shadow-lg shadow-black/10">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-950 text-amber-400">
+                <CalendarDays size={20} />
+              </span>
+              <p className="text-sm font-black leading-tight text-emerald-950">
+                {today.weekday},
+                <br />
+                ngày {today.dateStr}
+              </p>
+            </div>
           </div>
         </header>
 
-        <section className="mb-4 grid grid-cols-3 gap-x-5 gap-y-3 rounded-2xl bg-slate-50 p-4 text-[17px] leading-snug">
-          {[
-            ["Họ và tên", form.fullName],
-            ["Intern ID", form.internId],
-            ["Mentor", form.mentor],
-            ["Vị trí", form.position],
-            ["Team/Phòng ban", form.team],
-            ["Dự án/Workspace", form.project],
-          ].map(([label, value]) => (
-            <p key={label} className="min-w-0 break-words text-slate-700">
-              <span className="block text-[13px] font-black uppercase tracking-wide text-slate-400">
-                {label}
-              </span>
-              <span className="font-bold">{value || "—"}</span>
-            </p>
-          ))}
-        </section>
+        {/* Body */}
+        <div className="space-y-5 px-8 py-7">
+          <div className="flex items-start gap-4 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200/80">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-white">
+              <UserRound size={22} />
+            </span>
+            <div>
+              <p className="text-lg font-black text-emerald-950">
+                Kính gửi {form.recipient || "..."},
+              </p>
+              <p className="mt-0.5 text-sm font-semibold text-slate-500">
+                {form.intro}
+              </p>
+            </div>
+          </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <ExportSection title="1. Hôm nay học gì?">
-            <ExportList items={form.learnedItems} />
-            {learnedChecklistItems.length ? (
-              <div className="mt-3 border-t border-dashed border-slate-200 pt-3">
-                <p className="mb-1 text-[13px] font-black uppercase tracking-wide text-slate-400">
-                  Checklist đã chọn
-                </p>
-                <ExportList items={learnedChecklistItems} />
-              </div>
-            ) : null}
-          </ExportSection>
+          <div className="grid grid-cols-6 gap-2.5">
+            <ExportStatCard label="Tổng đầu việc" value={stats.total} Icon={ClipboardList} tone="green" />
+            <ExportStatCard label="Hạn trong ngày" value={stats.dueToday} Icon={CalendarDays} tone="gold" />
+            <ExportStatCard label="Đã hoàn thành" value={stats.done} Icon={CheckCircle2} tone="green" />
+            <ExportStatCard label="Đang thực hiện" value={stats.inprogress} Icon={Loader2} tone="gold" />
+            <ExportStatCard label="Chưa thực hiện" value={stats.pending} Icon={AlertCircle} tone="red" />
+            <ExportStatCard label="Chưa cập nhật" value={0} Icon={HelpCircle} tone="gray" />
+          </div>
 
-          <ExportSection title="2. Thực hành – áp dụng">
-            <ExportList items={form.appliedItems} />
-            {appliedChecklistItems.length ? (
-              <div className="mt-3 border-t border-dashed border-slate-200 pt-3">
-                <p className="mb-1 text-[13px] font-black uppercase tracking-wide text-slate-400">
-                  Checklist đã chọn
-                </p>
-                <ExportList items={appliedChecklistItems} />
-              </div>
-            ) : null}
-          </ExportSection>
-        </div>
+          <div className="space-y-3">
+            <ExportRibbon number={1} title="Ưu tiên thực hiện hôm nay" />
+            <div className="space-y-3">
+              {form.priorityTasks.map((task, i) => (
+                <ExportPriorityCard key={task.id} index={i + 1} task={task} />
+              ))}
+            </div>
+          </div>
 
-        <ExportSection title="3. Công việc đã thực hiện" className="mt-4">
-          {visibleTasks.length ? (
-            <div className="overflow-hidden rounded-xl border border-slate-200">
-              <table className="w-full table-fixed border-collapse text-[14px] leading-snug">
-                <thead>
-                  <tr className="bg-slate-100 text-left text-[12px] font-black uppercase tracking-wide text-slate-500">
-                    <th className="w-[38px] border-b border-r border-slate-200 px-2 py-2 text-center">
-                      #
-                    </th>
-                    <th className="w-[20%] border-b border-r border-slate-200 px-2 py-2">
-                      Công việc
-                    </th>
-                    <th className="w-[26%] border-b border-r border-slate-200 px-2 py-2">
-                      Mô tả
-                    </th>
-                    <th className="w-[24%] border-b border-r border-slate-200 px-2 py-2">
-                      Kết quả
-                    </th>
-                    <th className="w-[62px] border-b border-r border-slate-200 px-2 py-2 text-center">
-                      Giờ
-                    </th>
-                    <th className="w-[100px] border-b border-slate-200 px-2 py-2">
-                      Trạng thái
-                    </th>
+          <div className="space-y-3">
+            <ExportRibbon number={2} title="Công việc theo dõi / bổ sung" />
+            <div className="overflow-hidden rounded-xl ring-1 ring-slate-200">
+              <table className="w-full border-collapse text-left text-sm">
+                <thead className="bg-emerald-950 text-[11px] font-black uppercase tracking-wide text-white">
+                  <tr>
+                    <th className="w-12 px-3 py-3 text-center">STT</th>
+                    <th className="px-3 py-3">Nội dung công việc</th>
+                    <th className="px-3 py-3">Dự án / Hạng mục</th>
+                    <th className="px-3 py-3">Hạn hoàn thành</th>
+                    <th className="w-16 px-3 py-3 text-center">Hỗ trợ</th>
+                    <th className="w-32 px-3 py-3">Trạng thái</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {visibleTasks.map((task, index) => (
-                    <tr key={index} className="align-top text-slate-700">
-                      <td className="border-r border-t border-slate-200 px-2 py-2 text-center font-black text-slate-400">
-                        {index + 1}
-                      </td>
-                      <td className="whitespace-pre-wrap break-words border-r border-t border-slate-200 px-2 py-2 font-bold">
-                        {task.task || "—"}
-                      </td>
-                      <td className="whitespace-pre-wrap break-words border-r border-t border-slate-200 px-2 py-2">
-                        {task.description || "—"}
-                      </td>
-                      <td className="whitespace-pre-wrap break-words border-r border-t border-slate-200 px-2 py-2">
-                        {task.result || "—"}
-                      </td>
-                      <td className="border-r border-t border-slate-200 px-2 py-2 text-center font-bold">
-                        {task.hours || "—"}
-                      </td>
-                      <td className="break-words border-t border-slate-200 px-2 py-2 font-bold">
-                        {STATUS_OPTIONS.find(
-                          (status) => status.value === task.status,
-                        )?.label ?? "—"}
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {visibleFollowups.length ? (
+                    visibleFollowups.map((row, i) => (
+                      <tr key={row.id}>
+                        <td className="px-3 py-3 text-center font-black text-slate-400">{i + 1}</td>
+                        <td className="whitespace-pre-wrap break-words px-3 py-3 font-semibold text-slate-700">
+                          {row.content || "—"}
+                        </td>
+                        <td className="px-3 py-3 font-bold text-emerald-900">{row.project || "—"}</td>
+                        <td className="px-3 py-3 font-black text-rose-600">
+                          {formatDateDisplay(row.due) || "—"}
+                        </td>
+                        <td className="px-3 py-3 text-center font-semibold text-slate-400">
+                          {row.support || "-"}
+                        </td>
+                        <td className="px-3 py-3">
+                          <ExportBadge status={row.status} />
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="px-3 py-4 text-center text-sm font-semibold italic text-slate-400">
+                        Chưa có công việc theo dõi / bổ sung
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
-          ) : (
-            <p className="text-[16px] font-semibold italic text-slate-400">
-              Chưa có công việc
-            </p>
-          )}
-          <p className="mt-2 text-right text-[16px] font-black text-slate-700">
-            Tổng thời gian:{" "}
-            <span className="text-slate-950">{totalHours || 0} giờ</span>
-          </p>
-        </ExportSection>
-
-        <ExportSection title="4. Kết quả đạt được" className="mt-4">
-          <div className="grid grid-cols-4 gap-2">
-            {ACHIEVEMENT_EXPORT_FIELDS.map((field) => (
-              <div
-                key={field.key}
-                className="min-w-0 rounded-xl bg-slate-50 px-3 py-2"
-              >
-                <p className="text-[12px] font-black uppercase leading-tight tracking-wide text-slate-400">
-                  {field.label}
-                </p>
-                <p className="mt-1 whitespace-pre-wrap break-words text-[17px] font-black text-slate-700">
-                  {form.achievements[field.key] || "—"}
-                </p>
-              </div>
-            ))}
           </div>
-        </ExportSection>
 
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          <ExportSection title="5. Khó khăn / Vấn đề">
-            <ExportList items={form.difficulties} />
-          </ExportSection>
-          <ExportSection title="6. Kế hoạch ngày mai">
-            <ExportList items={form.planTomorrow} />
-          </ExportSection>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          <ExportSection title="7. Tự đánh giá">
-            <div className="space-y-2">
-              {SELF_RATING_LABELS.map((item) => (
-                <div
-                  key={item.key}
-                  className="flex items-center justify-between gap-4"
-                >
-                  <span className="text-[15px] font-bold text-slate-600">
-                    {item.label}
-                  </span>
-                  <ExportStars value={form.selfRating[item.key]} />
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 rounded-xl bg-slate-50 p-3">
-              <p className="mb-1 text-[12px] font-black uppercase tracking-wide text-slate-400">
-                Ghi chú tự đánh giá
-              </p>
-              <p className="whitespace-pre-wrap break-words text-[16px] font-semibold leading-snug text-slate-700">
-                {form.selfNote || "—"}
-              </p>
-            </div>
-          </ExportSection>
-
-          <ExportSection title="8. Nhận xét Mentor">
-            <p className="whitespace-pre-wrap break-words text-[16px] font-semibold leading-snug text-slate-700">
-              {form.mentorComment || "—"}
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3">
-              <div>
-                <p className="text-[12px] font-black uppercase tracking-wide text-slate-400">
-                  Đánh giá tổng thể
-                </p>
-                <ExportStars value={form.mentorOverallRating} />
+          <div className="grid grid-cols-[1fr_auto] gap-3">
+            <div className="rounded-xl border border-amber-300/70 bg-amber-50/60 p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-950 text-white">
+                  <ClipboardList size={16} />
+                </span>
+                <p className="text-sm font-black uppercase tracking-wide text-emerald-950">Lưu ý</p>
               </div>
-              <div>
-                <p className="text-[12px] font-black uppercase tracking-wide text-slate-400">
-                  Mentor ký tên
-                </p>
-                <p className="mt-1 break-words text-[17px] font-black text-slate-700">
-                  {form.mentorSignature || "—"}
-                </p>
-              </div>
+              {visibleNotes.length ? (
+                <ul className="space-y-1.5 pl-1">
+                  {visibleNotes.map((note, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm font-semibold text-slate-600">
+                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-amber-500" />
+                      {note}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm font-semibold italic text-slate-400">Chưa có lưu ý</p>
+              )}
             </div>
-          </ExportSection>
-        </div>
 
-        <footer className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-center text-[13px] font-bold leading-snug text-slate-300">
-          Báo cáo trung thực, cụ thể, rõ ràng · Tập trung vào kết quả và giá trị
-          tạo ra · Chủ động hỏi khi gặp khó khăn
-        </footer>
+            <div className="flex min-w-[180px] flex-col items-center justify-center gap-2 rounded-xl bg-slate-50 px-6 py-4 text-center ring-1 ring-slate-200/80">
+              <span className="flex size-12 items-center justify-center rounded-full bg-emerald-950 text-white">
+                <UserRound size={22} />
+              </span>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Người phụ trách</p>
+              <p className="text-lg font-black text-emerald-950">{form.owner || "—"}</p>
+              <span className="mt-1 flex items-center gap-2">
+                <span className="h-px w-8 bg-amber-400/70" />
+                <Sparkles size={12} className="text-amber-400" />
+                <span className="h-px w-8 bg-amber-400/70" />
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 });
-/* ============================================================ */
 
-export default function InternDailyReportPage() {
+/* ============================================================
+ * Main page — form nhập liệu
+ * ============================================================ */
+
+export default function BaoCaoDauNgayFormPage() {
   const [form, setForm] = useState<ReportForm>(emptyForm());
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
-
-  const totalHours = useMemo(
-    () =>
-      form.tasks.reduce((sum, task) => {
-        const value = Number(task.hours);
-        return sum + (Number.isFinite(value) ? value : 0);
-      }, 0),
-    [form.tasks],
-  );
-
-  function update<K extends keyof ReportForm>(key: K, value: ReportForm[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function updateListItem(
-    key: "learnedItems" | "appliedItems" | "difficulties" | "planTomorrow",
-    index: number,
-    value: string,
-  ) {
-    setForm((prev) => {
-      const next = [...prev[key]];
-      next[index] = value;
-      return { ...prev, [key]: next };
-    });
-  }
-
-  function updateTask(index: number, patch: Partial<TaskRow>) {
-    setForm((prev) => {
-      const next = [...prev.tasks];
-      next[index] = { ...next[index], ...patch };
-      return { ...prev, tasks: next };
-    });
-  }
-
-  function toggleChecklist(
-    key: "learnedChecklist" | "appliedChecklist",
-    label: string,
-  ) {
-    setForm((prev) => ({
-      ...prev,
-      [key]: { ...prev[key], [label]: !prev[key][label] },
-    }));
-  }
+  const [isExporting, setIsExporting] = useState(false);
+  // Trên iOS Safari (kể cả trong webview Zalo), thẻ <a download> đôi khi
+  // không tự tải được. previewUrl lưu link ảnh vừa mở ở tab mới để hiển
+  // thị hướng dẫn "nhấn giữ để lưu" cho người dùng trong trường hợp đó.
+  const [previewUrl, setPreviewUrl] = useState<string>("");
 
   const exportCardRef = useRef<HTMLDivElement>(null);
   const exportContentRef = useRef<HTMLDivElement>(null);
-  const [isExporting, setIsExporting] = useState(false);
 
+  function update<K extends keyof ReportForm>(key: K, value: ReportForm[K]) {
+    // flushSync ép React commit state ngay lập tức (thay vì gộp/hoãn batch),
+    // đảm bảo DOM của card xuất ảnh luôn phản ánh đúng giá trị vừa gõ
+    // trước khi người dùng kịp bấm "Xuất ảnh".
+    flushSync(() => {
+      setForm((prev) => ({ ...prev, [key]: value }));
+    });
+    setSaveSuccess(false);
+  }
+
+  // ---- Priority tasks ----
+  function addPriorityTask() {
+    update("priorityTasks", [
+      ...form.priorityTasks,
+      {
+        id: uid("p"),
+        project: "",
+        category: "",
+        description: "",
+        due: form.reportDate,
+        owner: form.owner,
+        status: "inprogress",
+      },
+    ]);
+  }
+  function updatePriorityTask(id: string, patch: Partial<PriorityTask>) {
+    update(
+      "priorityTasks",
+      form.priorityTasks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+    );
+  }
+  function removePriorityTask(id: string) {
+    update("priorityTasks", form.priorityTasks.filter((t) => t.id !== id));
+  }
+
+  // ---- Followup tasks ----
+  function addFollowupTask() {
+    update("followupTasks", [
+      ...form.followupTasks,
+      {
+        id: uid("f"),
+        content: "",
+        project: "",
+        due: form.reportDate,
+        support: "-",
+        status: "pending",
+      },
+    ]);
+  }
+  function updateFollowupTask(id: string, patch: Partial<FollowupTask>) {
+    update(
+      "followupTasks",
+      form.followupTasks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+    );
+  }
+  function removeFollowupTask(id: string) {
+    update("followupTasks", form.followupTasks.filter((t) => t.id !== id));
+  }
+
+  // ---- Notes ----
+  function addNote() {
+    update("notes", [...form.notes, ""]);
+  }
+  function updateNote(index: number, value: string) {
+    const next = [...form.notes];
+    next[index] = value;
+    update("notes", next);
+  }
+  function removeNote(index: number) {
+    update(
+      "notes",
+      form.notes.filter((_, i) => i !== index),
+    );
+  }
+
+  const stats = useMemo(() => {
+    const all = [...form.priorityTasks, ...form.followupTasks];
+    const count = (status: TaskStatus) => all.filter((t) => t.status === status).length;
+    return {
+      total: all.length,
+      done: count("done"),
+      inprogress: count("inprogress"),
+      pending: count("pending"),
+    };
+  }, [form.priorityTasks, form.followupTasks]);
+
+  /* ---- Xuất ảnh PNG và tải xuống — tương thích iOS & Android ---- */
   async function handleExportImage() {
     const exportFrame = exportCardRef.current;
     const exportContent = exportContentRef.current;
@@ -667,57 +739,66 @@ export default function InternDailyReportPage() {
 
     setIsExporting(true);
     setSaveError("");
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl("");
+    }
 
     try {
-      // Chờ font và giao diện render hoàn tất để tránh thiếu chữ khi chụp.
       if (document.fonts?.ready) {
         await document.fonts.ready;
       }
 
-      // Trả nội dung về kích thước thật trước khi đo.
-      exportContent.style.transform = "none";
-      exportContent.style.left = `${EXPORT_IMAGE_PADDING}px`;
-      exportContent.style.top = `${EXPORT_IMAGE_PADDING}px`;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => resolve()),
-      );
-
-      const availableWidth = EXPORT_IMAGE_WIDTH - EXPORT_IMAGE_PADDING * 2;
-      const availableHeight = EXPORT_IMAGE_HEIGHT - EXPORT_IMAGE_PADDING * 2;
-      const contentWidth = exportContent.scrollWidth;
       const contentHeight = exportContent.scrollHeight;
+      const finalHeight = contentHeight + EXPORT_IMAGE_PADDING * 2;
+      exportFrame.style.height = `${finalHeight}px`;
 
-      // Base width của card được thiết kế hẹp hơn khung xuất,
-      // nên có thể tự phóng to hoặc thu nhỏ để luôn vừa khung 9:16.
-      const widthScale = availableWidth / Math.max(contentWidth, 1);
-      const heightScale = availableHeight / Math.max(contentHeight, 1);
-      const scale = Math.min(1, widthScale, heightScale);
-
-      const renderedWidth = contentWidth * scale;
-      const renderedHeight = contentHeight * scale;
-
-      exportContent.style.transform = `scale(${scale})`;
-      exportContent.style.left = `${Math.max((EXPORT_IMAGE_WIDTH - renderedWidth) / 2, EXPORT_IMAGE_PADDING)}px`;
-      exportContent.style.top = `${EXPORT_IMAGE_PADDING}px`;
-
-      // Chờ trình duyệt áp dụng transform rồi mới chụp.
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
 
-      const dataUrl = await toPng(exportFrame, {
+      // Dùng toBlob thay vì toPng: ảnh 1080px x2 pixel ratio dưới dạng
+      // base64 dataURL khá nặng, dễ khiến trình duyệt di động (đặc biệt
+      // Safari) treo hoặc rớt link tải. Blob nhẹ hơn và ổn định hơn.
+      const blob = await toBlob(exportFrame, {
         width: EXPORT_IMAGE_WIDTH,
-        height: EXPORT_IMAGE_HEIGHT,
-        pixelRatio: 1,
+        height: finalHeight,
+        pixelRatio: 2,
         cacheBust: true,
         backgroundColor: "#f1f5f9",
       });
 
+      if (!blob) {
+        throw new Error("Không thể tạo ảnh.");
+      }
+
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      const filename = `bao-cao-dau-ngay-${form.reportDate}_${stamp}.png`;
+      const objectUrl = URL.createObjectURL(blob);
+
+      // Thử tải xuống trực tiếp bằng thẻ <a download> — cách này hoạt
+      // động trên Android/Chrome và hầu hết trình duyệt di động hiện nay.
       const link = document.createElement("a");
-      link.download = `bao-cao-ngay-${form.reportDate}-9x16.png`;
-      link.href = dataUrl;
+      link.download = filename;
+      link.href = objectUrl;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+
+      const isIOS =
+        typeof navigator !== "undefined" && /iP(hone|ad|od)/.test(navigator.userAgent);
+
+      if (isIOS) {
+        // Một số phiên bản Safari/webview trên iOS vẫn bỏ qua thuộc tính
+        // `download`. Mở thêm ảnh ở tab mới để chắc chắn người dùng luôn
+        // lưu được, dù trình duyệt có tải tự động hay không.
+        window.open(objectUrl, "_blank");
+        setPreviewUrl(objectUrl);
+      } else {
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+      }
     } catch (error) {
       console.error("Export image failed:", error);
       setSaveError("Không thể xuất ảnh báo cáo. Vui lòng thử lại.");
@@ -726,6 +807,7 @@ export default function InternDailyReportPage() {
     }
   }
 
+  /* ---- Lưu báo cáo (tuỳ backend của bạn) ---- */
   async function handleSubmit() {
     setIsSaving(true);
     setSaveError("");
@@ -734,550 +816,300 @@ export default function InternDailyReportPage() {
       const response = await fetch("/api/daily-reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, totalHours }),
+        body: JSON.stringify({ ...form, stats }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => null);
-        throw new Error(
-          body?.message ?? "Không thể lưu báo cáo. Vui lòng thử lại.",
-        );
+        throw new Error(body?.message ?? "Không thể lưu báo cáo. Vui lòng thử lại.");
       }
       setSaveSuccess(true);
     } catch (error) {
-      setSaveError(
-        error instanceof Error ? error.message : "Đã có lỗi xảy ra.",
-      );
+      setSaveError(error instanceof Error ? error.message : "Đã có lỗi xảy ra.");
     } finally {
       setIsSaving(false);
     }
   }
 
-  const activeWeekday = weekdayIndex(form.reportDate);
-
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
-      <section className="mx-auto max-w-6xl space-y-5">
-        {/* ===== Header ===== */}
-        <div className="flex flex-col gap-4 rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-md border border-slate-200 text-[10px] font-black uppercase text-slate-400">
-              LOGO
-            </div>
-            <div>
+    <main className="min-h-screen bg-slate-100 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl space-y-4">
+        {/* ===== Header nhập liệu ===== */}
+        <div className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex-1 space-y-3">
+            <div className="border-l-4 border-emerald-800 pl-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.25em] text-emerald-700">
+                Daily Brief
+              </p>
               <h1 className="text-2xl font-black uppercase tracking-wide text-slate-900">
-                Báo cáo ngày
+                Báo cáo đầu ngày
               </h1>
-              
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div>
+                <FieldLabel>Đơn vị</FieldLabel>
+                <TextField value={form.companyName} onChange={(v) => update("companyName", v)} />
+              </div>
+              <div>
+                <FieldLabel>Phụ đề</FieldLabel>
+                <TextField value={form.subtitle} onChange={(v) => update("subtitle", v)} />
+              </div>
+              <div>
+                <FieldLabel>Ngày báo cáo</FieldLabel>
+                <DateField value={form.reportDate} onChange={(v) => update("reportDate", v)} />
+              </div>
             </div>
           </div>
 
-          <div className="rounded-md border border-slate-200 px-4 py-3">
-            <div className="mb-2 flex items-center gap-2 text-xs font-black text-slate-500">
-              Ngày báo cáo:
-              <input
-                type="date"
-                value={form.reportDate}
-                onChange={(e) => update("reportDate", e.target.value)}
-                className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-aqua"
+          <div className="flex items-center gap-3 self-start rounded-xl bg-amber-500 px-4 py-3 shadow-md shadow-amber-500/20 sm:self-end">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-950 text-amber-400">
+              <CalendarDays size={20} />
+            </span>
+            <p className="text-sm font-black leading-tight text-emerald-950">
+              {weekdayLabel(form.reportDate) || "—"},
+              <br />
+              ngày {formatDateDisplay(form.reportDate) || "—"}
+            </p>
+          </div>
+        </div>
+
+        {/* ===== Lời gửi ===== */}
+        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[220px_1fr]">
+            <div>
+              <FieldLabel>Kính gửi</FieldLabel>
+              <TextField
+                value={form.recipient}
+                onChange={(v) => update("recipient", v)}
+                placeholder="Sếp Tuấn"
               />
             </div>
-            <div className="flex items-center gap-3 text-[11px] font-black text-slate-500">
-              {WEEKDAYS.map((day, index) => (
-                <span key={day} className="flex flex-col items-center gap-1">
-                  {day}
-                  <span
-                    className={`size-3 rounded-full border ${
-                      index === activeWeekday
-                        ? "border-aqua bg-aqua"
-                        : "border-slate-300"
-                    }`}
-                  />
+            <div>
+              <FieldLabel>Lời dẫn</FieldLabel>
+              <TextField value={form.intro} onChange={(v) => update("intro", v)} />
+            </div>
+          </div>
+        </div>
+
+        {/* ===== Thống kê (tự tính, chỉ xem) ===== */}
+        <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-6">
+          <ExportStatCard label="Tổng đầu việc" value={stats.total} Icon={ClipboardList} tone="green" />
+          <ExportStatCard label="Hạn trong ngày" value={stats.total} Icon={CalendarDays} tone="gold" />
+          <ExportStatCard label="Đã hoàn thành" value={stats.done} Icon={CheckCircle2} tone="green" />
+          <ExportStatCard label="Đang thực hiện" value={stats.inprogress} Icon={Loader2} tone="gold" />
+          <ExportStatCard label="Chưa thực hiện" value={stats.pending} Icon={AlertCircle} tone="red" />
+          <ExportStatCard label="Chưa cập nhật" value={0} Icon={HelpCircle} tone="gray" />
+        </div>
+
+        {/* ===== Mục 1: Ưu tiên hôm nay ===== */}
+        <FormSection number={1} title="Ưu tiên thực hiện hôm nay">
+          <div className="space-y-3">
+            {form.priorityTasks.map((task, index) => (
+              <div
+                key={task.id}
+                className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-[28px_1fr_1fr_1fr_140px_140px_32px] sm:items-start"
+              >
+                <span className="flex size-7 items-center justify-center rounded-full bg-emerald-950 text-xs font-black text-white sm:mt-1">
+                  {index + 1}
                 </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ===== Thông tin cá nhân ===== */}
-        <div className="grid grid-cols-1 gap-4 rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:grid-cols-3">
-          <div>
-            <label className="mb-1 block text-xs font-black uppercase text-slate-500">
-              Họ và tên
-            </label>
-            <LineInput
-              value={form.fullName}
-              onChange={(v) => update("fullName", v)}
-              placeholder="Nguyễn Văn A"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-black uppercase text-slate-500">
-              Intern ID
-            </label>
-            <LineInput
-              value={form.internId}
-              onChange={(v) => update("internId", v)}
-              placeholder="INT-0012"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-black uppercase text-slate-500">
-              Người hướng dẫn (Mentor)
-            </label>
-            <LineInput
-              value={form.mentor}
-              onChange={(v) => update("mentor", v)}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-black uppercase text-slate-500">
-              Vị trí
-            </label>
-            <LineInput
-              value={form.position}
-              onChange={(v) => update("position", v)}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-black uppercase text-slate-500">
-              Team/Phòng ban
-            </label>
-            <LineInput value={form.team} onChange={(v) => update("team", v)} />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-black uppercase text-slate-500">
-              Dự án/Workspace
-            </label>
-            <LineInput
-              value={form.project}
-              onChange={(v) => update("project", v)}
-            />
-          </div>
-        </div>
-
-        {/* ===== Mục 1 & 2 ===== */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <SectionCard number={1} title="Hôm nay học gì?">
-            <p className="mb-3 text-xs font-semibold text-slate-500">
-              Kiến thức, công cụ, quy trình mới học được hôm nay.
-            </p>
-            <div className="mb-4 space-y-2">
-              {form.learnedItems.map((value, index) => (
-                <LineInput
-                  key={index}
-                  value={value}
-                  onChange={(v) => updateListItem("learnedItems", index, v)}
-                />
-              ))}
-            </div>
-            <div className="mb-2 inline-block rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-500">
-              Checklist tham khảo
-            </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <div className="space-y-2">
-                {LEARNED_CHECKLIST_LEFT.map((label) => (
-                  <CheckboxRow
-                    key={label}
-                    label={label}
-                    checked={!!form.learnedChecklist[label]}
-                    onChange={() => toggleChecklist("learnedChecklist", label)}
+                <div>
+                  <FieldLabel>Dự án</FieldLabel>
+                  <TextField
+                    value={task.project}
+                    onChange={(v) => updatePriorityTask(task.id, { project: v })}
+                    placeholder="Hạt Dẻ Ông Lý"
                   />
-                ))}
+                </div>
+                <div>
+                  <FieldLabel>Hạng mục</FieldLabel>
+                  <TextField
+                    value={task.category}
+                    onChange={(v) => updatePriorityTask(task.id, { category: v })}
+                    placeholder="Website"
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Mô tả</FieldLabel>
+                  <TextField
+                    value={task.description}
+                    onChange={(v) => updatePriorityTask(task.id, { description: v })}
+                    placeholder="Sửa web, kiểm thử."
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Hạn</FieldLabel>
+                  <DateField
+                    value={task.due}
+                    onChange={(v) => updatePriorityTask(task.id, { due: v })}
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Phụ trách</FieldLabel>
+                  <TextField
+                    value={task.owner}
+                    onChange={(v) => updatePriorityTask(task.id, { owner: v })}
+                    placeholder="Khả Doanh"
+                  />
+                </div>
+                <div className="flex items-end justify-center sm:pt-5">
+                  <RemoveRowButton
+                    onClick={() => removePriorityTask(task.id)}
+                    label="Xoá công việc ưu tiên"
+                  />
+                </div>
+                <div className="sm:col-span-7">
+                  <FieldLabel>Trạng thái</FieldLabel>
+                  <div className="max-w-[220px]">
+                    <StatusSelect
+                      value={task.status}
+                      onChange={(v) => updatePriorityTask(task.id, { status: v })}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                {LEARNED_CHECKLIST_RIGHT.map((label) => (
-                  <CheckboxRow
-                    key={label}
-                    label={label}
-                    checked={!!form.learnedChecklist[label]}
-                    onChange={() => toggleChecklist("learnedChecklist", label)}
+            ))}
+          </div>
+          <div className="mt-3">
+            <AddRowButton onClick={addPriorityTask} label="Thêm công việc ưu tiên" />
+          </div>
+        </FormSection>
+
+        {/* ===== Mục 2: Theo dõi / bổ sung ===== */}
+        <FormSection number={2} title="Công việc theo dõi / bổ sung">
+          <div className="space-y-3">
+            {form.followupTasks.map((task) => (
+              <div
+                key={task.id}
+                className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-[1.4fr_1fr_140px_100px_160px_32px] sm:items-start"
+              >
+                <div>
+                  <FieldLabel>Nội dung công việc</FieldLabel>
+                  <TextField
+                    value={task.content}
+                    onChange={(v) => updateFollowupTask(task.id, { content: v })}
+                    placeholder="Hỗ trợ người dùng khi dùng web ca trưởng."
                   />
-                ))}
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                  <span>Kiến thức khác:</span>
-                  <LineInput
-                    value={form.learnedOther}
-                    onChange={(v) => update("learnedOther", v)}
+                </div>
+                <div>
+                  <FieldLabel>Dự án / Hạng mục</FieldLabel>
+                  <TextField
+                    value={task.project}
+                    onChange={(v) => updateFollowupTask(task.id, { project: v })}
+                    placeholder="Hạt Dẻ Ông Lý"
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Hạn hoàn thành</FieldLabel>
+                  <DateField
+                    value={task.due}
+                    onChange={(v) => updateFollowupTask(task.id, { due: v })}
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Hỗ trợ</FieldLabel>
+                  <TextField
+                    value={task.support}
+                    onChange={(v) => updateFollowupTask(task.id, { support: v })}
+                    placeholder="-"
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Trạng thái</FieldLabel>
+                  <StatusSelect
+                    value={task.status}
+                    onChange={(v) => updateFollowupTask(task.id, { status: v })}
+                  />
+                </div>
+                <div className="flex items-end justify-center sm:pt-5">
+                  <RemoveRowButton
+                    onClick={() => removeFollowupTask(task.id)}
+                    label="Xoá công việc theo dõi"
                   />
                 </div>
               </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            number={2}
-            title="Hôm nay thực hành – áp dụng gì?"
-            icon={<Wrench size={18} />}
-          >
-            <p className="mb-3 text-xs font-semibold text-slate-500">
-              Nội dung đã thực hành, áp dụng kiến thức vào công việc.
-            </p>
-            <div className="mb-4 space-y-2">
-              {form.appliedItems.map((value, index) => (
-                <LineInput
-                  key={index}
-                  value={value}
-                  onChange={(v) => updateListItem("appliedItems", index, v)}
-                />
-              ))}
-            </div>
-            <div className="mb-2 inline-block rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-500">
-              Checklist tham khảo
-            </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <div className="space-y-2">
-                {APPLIED_CHECKLIST_LEFT.map((label) => (
-                  <CheckboxRow
-                    key={label}
-                    label={label}
-                    checked={!!form.appliedChecklist[label]}
-                    onChange={() => toggleChecklist("appliedChecklist", label)}
-                  />
-                ))}
-              </div>
-              <div className="space-y-2">
-                {APPLIED_CHECKLIST_RIGHT.map((label) => (
-                  <CheckboxRow
-                    key={label}
-                    label={label}
-                    checked={!!form.appliedChecklist[label]}
-                    onChange={() => toggleChecklist("appliedChecklist", label)}
-                  />
-                ))}
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                  <span>Thực hành khác:</span>
-                  <LineInput
-                    value={form.appliedOther}
-                    onChange={(v) => update("appliedOther", v)}
-                  />
-                </div>
-              </div>
-            </div>
-          </SectionCard>
-        </div>
-
-        {/* ===== Mục 3: bảng công việc ===== */}
-        <SectionCard number={3} title="Hôm nay đã làm được những công việc gì?">
-          <p className="mb-3 text-xs font-semibold text-slate-500">
-            Liệt kê các công việc/đầu việc đã hoàn thành trong ngày.
-          </p>
-          <div className="thin-scrollbar overflow-x-auto rounded-md border border-slate-200">
-            <table className="w-full min-w-[880px] border-collapse text-left text-sm">
-              <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-500">
-                <tr>
-                  <th className="border-b border-slate-200 px-3 py-2 w-10">
-                    #
-                  </th>
-                  <th className="border-b border-slate-200 px-3 py-2">
-                    Công việc/Đầu việc
-                  </th>
-                  <th className="border-b border-slate-200 px-3 py-2">
-                    Mô tả ngắn gọn
-                  </th>
-                  <th className="border-b border-slate-200 px-3 py-2">
-                    Kết quả/Output
-                  </th>
-                  <th className="border-b border-slate-200 px-3 py-2 w-24">
-                    Thời gian (giờ)
-                  </th>
-                  <th className="border-b border-slate-200 px-3 py-2 w-72">
-                    Trạng thái
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {form.tasks.map((task, index) => (
-                  <tr key={index}>
-                    <td className="px-3 py-2 font-black text-slate-400">
-                      {index + 1}
-                    </td>
-                    <td className="px-3 py-2">
-                      <LineInput
-                        value={task.task}
-                        onChange={(v) => updateTask(index, { task: v })}
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <LineInput
-                        value={task.description}
-                        onChange={(v) => updateTask(index, { description: v })}
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <LineInput
-                        value={task.result}
-                        onChange={(v) => updateTask(index, { result: v })}
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.5}
-                        value={task.hours}
-                        onChange={(e) =>
-                          updateTask(index, { hours: e.target.value })
-                        }
-                        className="w-16 rounded border border-slate-200 px-2 py-1 text-sm font-semibold outline-none focus:border-aqua"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex flex-wrap items-center gap-3">
-                        {STATUS_OPTIONS.map((option) => (
-                          <label
-                            key={option.value}
-                            className="flex items-center gap-1.5 text-xs font-semibold text-slate-600"
-                          >
-                            <input
-                              type="radio"
-                              name={`status-${index}`}
-                              checked={task.status === option.value}
-                              onChange={() =>
-                                updateTask(index, { status: option.value })
-                              }
-                              className="size-3.5 text-aqua focus:ring-aqua"
-                            />
-                            <span
-                              className={`size-2 rounded-full ${option.dot}`}
-                            />
-                            {option.label}
-                          </label>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            ))}
           </div>
-          <div className="mt-3 flex justify-end text-xs font-black text-slate-600">
-            Tổng thời gian làm việc:&nbsp;
-            <span className="text-aqua">{totalHours || 0}</span>&nbsp;giờ
+          <div className="mt-3">
+            <AddRowButton onClick={addFollowupTask} label="Thêm công việc theo dõi" />
           </div>
-        </SectionCard>
+        </FormSection>
 
-        {/* ===== Mục 4 & 5 ===== */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <SectionCard number={4} title="Kết quả đạt được">
-            <p className="mb-3 text-xs font-semibold text-slate-500">
-              Những kết quả cụ thể/định lượng đạt được hôm nay (nếu có).
-            </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {[
-                { key: "workflowCount", label: "Workflow tạo mới" },
-                { key: "chatbotCount", label: "Chatbot / Automation" },
-                { key: "landingCount", label: "Landing page / Website" },
-                { key: "contentCount", label: "Bài viết / Nội dung" },
-                { key: "dataCount", label: "Dữ liệu nhập / CRM" },
-                { key: "fixCount", label: "Lỗi fix / Cải tiến" },
-              ].map((item) => (
-                <div
-                  key={item.key}
-                  className="rounded-md border border-slate-200 p-3"
-                >
-                  <p className="mb-1 text-xs font-black text-slate-600">
-                    {item.label}
-                  </p>
-                  <input
-                    value={
-                      form.achievements[
-                        item.key as keyof typeof form.achievements
-                      ]
-                    }
-                    onChange={(e) =>
-                      update("achievements", {
-                        ...form.achievements,
-                        [item.key]: e.target.value,
-                      })
-                    }
-                    placeholder="..........."
-                    className="w-full border-b border-dotted border-slate-300 bg-transparent py-1 text-sm font-semibold outline-none focus:border-aqua"
-                  />
+        {/* ===== Lưu ý & người phụ trách ===== */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_280px]">
+          <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-950 text-white">
+                <ClipboardList size={16} />
+              </span>
+              <p className="text-sm font-black uppercase tracking-wide text-emerald-950">Lưu ý</p>
+            </div>
+            <div className="space-y-2">
+              {form.notes.map((note, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <span className="size-1.5 shrink-0 rounded-full bg-amber-500" />
+                  <div className="flex-1">
+                    <TextField value={note} onChange={(v) => updateNote(index, v)} />
+                  </div>
+                  <RemoveRowButton onClick={() => removeNote(index)} label="Xoá lưu ý" />
                 </div>
               ))}
             </div>
             <div className="mt-3">
-              <label className="mb-1 block text-xs font-black text-slate-600">
-                Khác (ghi rõ):
-              </label>
-              <LineInput
-                value={form.achievements.other}
-                onChange={(v) =>
-                  update("achievements", { ...form.achievements, other: v })
-                }
-              />
+              <AddRowButton onClick={addNote} label="Thêm lưu ý" />
             </div>
-          </SectionCard>
+          </div>
 
-          <div className="flex flex-col gap-4">
-            <SectionCard number={5} title="Khó khăn / Vấn đề gặp phải">
-              <p className="mb-3 text-xs font-semibold text-slate-500">
-                Những khó khăn, lỗi, trở ngại trong quá trình làm việc.
-              </p>
-              <div className="space-y-2">
-                {form.difficulties.map((value, index) => (
-                  <LineInput
-                    key={index}
-                    value={value}
-                    onChange={(v) => updateListItem("difficulties", index, v)}
-                  />
-                ))}
-              </div>
-            </SectionCard>
-
-            <SectionCard
-              number={<Camera size={14} />}
-              title="Kế hoạch ngày mai"
-            >
-              <p className="mb-3 text-xs font-semibold text-slate-500">
-                Các công việc dự kiến sẽ thực hiện vào ngày mai.
-              </p>
-              <div className="space-y-2">
-                {form.planTomorrow.map((value, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <span className="text-xs font-black text-slate-400">
-                      {index + 1}.
-                    </span>
-                    <LineInput
-                      value={value}
-                      onChange={(v) => updateListItem("planTomorrow", index, v)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
+          <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
+            <FieldLabel>Người phụ trách</FieldLabel>
+            <TextField value={form.owner} onChange={(v) => update("owner", v)} placeholder="Khả Doanh" />
           </div>
         </div>
 
-        {/* ===== Tự đánh giá & Mentor ===== */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <SectionCard number="★" title="Tự đánh giá hôm nay">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-3">
-                {SELF_RATING_LABELS.map((item) => (
-                  <div
-                    key={item.key}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <span className="text-xs font-bold text-slate-600">
-                      {item.label}
-                    </span>
-                    <StarPicker
-                      value={form.selfRating[item.key]}
-                      onChange={(next) =>
-                        update("selfRating", {
-                          ...form.selfRating,
-                          [item.key]: next,
-                        })
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="rounded-md bg-emerald-50/60 p-3 ring-1 ring-emerald-100">
-                <label className="mb-1 block text-xs font-black text-slate-600">
-                  Ghi chú tự đánh giá:
-                </label>
-                <textarea
-                  value={form.selfNote}
-                  onChange={(e) => update("selfNote", e.target.value)}
-                  rows={4}
-                  className="w-full resize-none rounded bg-transparent text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-300"
-                  placeholder="Cảm nhận, tự nhận xét của bạn..."
-                />
-              </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard number="👤" title="Nhận xét của Mentor">
-            <p className="mb-3 text-xs font-semibold text-slate-500">
-              Nhận xét, góp ý và đánh giá của người hướng dẫn.
-            </p>
-            <textarea
-              value={form.mentorComment}
-              onChange={(e) => update("mentorComment", e.target.value)}
-              rows={4}
-              className="mb-3 w-full resize-none rounded-md border border-slate-200 p-3 text-sm font-semibold text-slate-700 outline-none focus:border-aqua"
-              placeholder="Nhận xét của mentor..."
-            />
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-slate-600">
-                  Đánh giá tổng thể:
-                </span>
-                <StarPicker
-                  value={form.mentorOverallRating}
-                  onChange={(next) => update("mentorOverallRating", next)}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-slate-600">
-                  Mentor ký tên:
-                </span>
-                <LineInput
-                  value={form.mentorSignature}
-                  onChange={(v) => update("mentorSignature", v)}
-                />
-              </div>
-            </div>
-          </SectionCard>
-        </div>
-
-        {/* ===== Ghi chú & Lưu ===== */}
-        <div className="rounded-lg bg-slate-900 p-4 text-center text-[11px] font-bold text-slate-300">
-          Lưu ý: Báo cáo trung thực, cụ thể, rõ ràng · Tập trung vào kết quả –
-          giá trị tạo ra · Hỏi khi gặp khó – không để vấn đề bị kẹt
-        </div>
-
+        {/* ===== Trạng thái lưu / lỗi ===== */}
         {saveError ? (
-          <div className="rounded-md bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600 ring-1 ring-rose-100">
+          <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600 ring-1 ring-rose-100">
             {saveError}
           </div>
         ) : null}
         {saveSuccess ? (
-          <div className="rounded-md bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-600 ring-1 ring-emerald-100">
+          <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-600 ring-1 ring-emerald-100">
             Đã lưu báo cáo thành công!
           </div>
         ) : null}
 
+        {/* Hướng dẫn lưu ảnh trên iOS khi thẻ tải xuống không tự chạy */}
+        {previewUrl ? (
+          <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700 ring-1 ring-amber-100">
+            Ảnh báo cáo đã mở ở tab mới — nhấn giữ vào ảnh và chọn "Lưu vào Ảnh" để lưu.
+          </div>
+        ) : null}
+
+        {/* ===== Nút hành động ===== */}
         <div className="flex justify-end gap-3 pb-6">
           <button
             type="button"
             onClick={handleExportImage}
             disabled={isExporting}
-            className="flex h-11 items-center gap-2 rounded-md border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isExporting ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Download size={16} />
-            )}
+            {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
             {isExporting ? "Đang xuất ảnh..." : "Xuất ảnh (Zalo)"}
           </button>
           <button
             type="button"
             onClick={handleSubmit}
             disabled={isSaving}
-            className="flex h-11 items-center gap-2 rounded-md bg-slate-900 px-5 text-sm font-black text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-11 items-center gap-2 rounded-xl bg-gradient-to-br from-emerald-800 to-emerald-700 px-5 text-sm font-black text-white shadow-md shadow-emerald-800/25 transition hover:from-emerald-900 hover:to-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSaving ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Save size={16} />
-            )}
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {isSaving ? "Đang lưu..." : "Lưu báo cáo"}
           </button>
         </div>
 
+        {/* ===== Card ẩn để xuất ảnh ===== */}
         <div className="pointer-events-none fixed -left-[9999px] top-0">
-          <ReportExportCard
-            ref={exportCardRef}
-            contentRef={exportContentRef}
-            form={form}
-            totalHours={totalHours}
-          />
+          <ReportExportCard ref={exportCardRef} contentRef={exportContentRef} form={form} />
         </div>
-      </section>
+      </div>
     </main>
   );
 }

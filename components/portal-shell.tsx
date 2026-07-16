@@ -1271,7 +1271,14 @@ export function PortalShell() {
                 className="flex h-10 items-center gap-2 rounded-md bg-white/16 px-3 text-sm font-extrabold text-white ring-1 ring-white/25 hover:bg-white/24"
               >
                 <CalendarCheck2 size={16} />
-                Báo cáo ngày
+                Báo cáo đầu ngày
+              </Link>
+               <Link
+                href="/bao-cao-cuoi-ngay"
+                className="flex h-10 items-center gap-2 rounded-md bg-white/16 px-3 text-sm font-extrabold text-white ring-1 ring-white/25 hover:bg-white/24"
+              >
+                <CalendarCheck2 size={16} />
+                Báo cáo cuối ngày
               </Link>
 
 <SoundToggle isOn={isNotificationSoundOn} onToggle={() => setIsNotificationSoundOn((current) => !current)} />
