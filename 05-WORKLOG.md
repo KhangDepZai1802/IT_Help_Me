@@ -34,7 +34,7 @@
 3. Đã có session cookie httpOnly ký HMAC và route protection backend: chưa login không thấy ticket; phòng ban chỉ xem/tạo/rating ticket của mình; IT mới quản trị danh mục, xử lý, xóa và import dữ liệu.
 4. Prisma schema PostgreSQL/Supabase đã có các model helpdesk và `DailyReport`; migration history đã được baseline, migration tạo bảng báo cáo ngày đã áp dụng thành công.
 5. Runtime Prisma dùng `@prisma/adapter-pg`; `DATABASE_URL` được normalize thêm `uselibpqcompat=true` khi URL có `sslmode=require` để tránh lỗi SSL self-signed của `pg`.
-6. Production Vercel `https://it-help-me.vercel.app` đã redeploy commit `33e69f0` ngày 2026-07-15, có trang `/bao-cao-ngay` và API `/api/daily-reports`; smoke test xác nhận app cùng kết nối DB hoạt động.
+6. Local `master` đã merge commit remote `e613376` vào merge commit `e704e95`, có thêm trang `/bao-cao-cuoi-ngay`; production Vercel vẫn đang ở deployment `dpl_J2iWbtJDo3suarFPLbS7U9ftJaS4` của bản trước vì lần redeploy mới chưa được phép chạy.
 
 ## VIỆC TIẾP THEO
 
@@ -43,15 +43,28 @@
 3. Cân nhắc chuyển xóa nhân viên IT sang soft delete hoặc ràng buộc nghiệp vụ rõ hơn.
 4. Không commit hoặc chia sẻ `.env`/`.env.local`; nếu lộ password DB/service key thì rotate trong Supabase và cập nhật lại Vercel env.
 5. Dùng `prisma migrate deploy` cho các thay đổi schema tiếp theo; ưu tiên cấu hình `DIRECT_URL` khi kết nối trực tiếp Supabase ổn định, hiện Prisma CLI có fallback sang `DATABASE_URL`.
-6. Redeploy production để đưa thay đổi tăng tương phản chữ của trang `/bao-cao-ngay` lên Vercel; sau đó Ban Giám đốc/Quản lý IT rà soát báo cáo DOCX và chốt ưu tiên 0–60 ngày.
+6. Redeploy merge commit `e704e95` lên Vercel khi giới hạn sử dụng Codex cho phép, smoke-test `/bao-cao-cuoi-ngay` cùng các API chính; sau đó Ban Giám đốc/Quản lý IT rà soát bản production.
 
 ## BLOCKERS
 
 - Direct Supabase host dạng IPv6 không dùng được trên máy local hiện tại: test IPv6 literal trả `ENETUNREACH`; dùng Session Pooler IPv4 thay thế.
+- Redeploy Vercel của merge commit `e704e95` bị chặn trước khi lệnh chạy vì tài khoản Codex chạm giới hạn sử dụng; cần chạy lại sau khi quota được mở hoặc người dùng tự chạy `npx vercel --prod --yes`.
 
 ---
 
 ## NHẬT KÝ SESSION
+
+### [2026-07-16] Session 31 - Codex
+- **Làm được:** Pull `origin/master`, merge commit `e613376` vào local `master` bằng merge commit `e704e95`; xử lý xung đột duy nhất tại `app/bao-cao-ngay/page.tsx` bằng cách ưu tiên phiên bản remote, giữ các commit local về Prisma/tài liệu; khôi phục worklog sau stash.
+- **File thay đổi chính:** `app/bao-cao-cuoi-ngay/page.tsx`, `app/bao-cao-ngay/page.tsx`, `components/portal-shell.tsx`, `05-WORKLOG.md`; merge commit còn giữ các thay đổi local trước đó.
+- **Đã test:** Xác nhận `e613376` là ancestor của `HEAD`; `npm.cmd run build` thành công, gồm encoding, TypeScript và 16 route, có `/bao-cao-cuoi-ngay`.
+- **Lưu ý/cảnh báo cho người sau:** Chưa redeploy được vì yêu cầu chạy Vercel bị hệ thống chặn do hết giới hạn sử dụng Codex trước khi lệnh thực thi; production chưa đổi và chưa thể smoke-test route mới. Local `master` đang ahead `origin/master` 3 commit, chưa push vì người dùng chỉ yêu cầu pull và redeploy.
+
+### [2026-07-16] Session 30 - Codex
+- **Làm được:** Build và redeploy commit `b533781` lên Vercel production; deployment `dpl_J2iWbtJDo3suarFPLbS7U9ftJaS4` đạt `READY` và được alias về `https://it-help-me.vercel.app`.
+- **File thay đổi chính:** `05-WORKLOG.md`; không thay đổi mã ứng dụng trong session này.
+- **Đã test:** `npm.cmd run build` thành công, gồm kiểm tra encoding, TypeScript và 15 route; Vercel production build thành công tại region `iad1`; smoke test `/`, `/bao-cao-ngay`, `/api/auth/session`, `/api/daily-reports` đều trả HTTP 200.
+- **Lưu ý/cảnh báo cho người sau:** Bản production hiện đã có thay đổi tăng tương phản của `/bao-cao-ngay`; bước tiếp theo là người dùng nghiệp vụ rà soát trực quan và chốt các ưu tiên 0–60 ngày.
 
 ### [2026-07-15] Session 29 - Codex
 - **Làm được:** Tăng độ tương phản toàn bộ chữ trên trang `/bao-cao-ngay` và bản xuất ảnh: nhãn, mô tả, checklist, bảng, dữ liệu nhập chuyển sang `slate-900/950`; placeholder chuyển sang `slate-700` và đậm hơn; giữ nguyên chữ sáng trên nền tối, màu trạng thái và sao chưa chọn.
@@ -76,15 +89,3 @@
 - **File thay đổi chính:** `docs/Bao_cao_Tong_quan_Quy_trinh_Nghiep_vu_IT_Help_Me.docx`, `05-WORKLOG.md`.
 - **Đã test:** Mở lại DOCX bằng `python-docx`, kiểm tra cấu trúc ZIP/XML, số đoạn/bảng, tiêu đề và chuỗi tiếng Việt trọng yếu; chạy `npm.cmd run build` theo quy định repository.
 - **Lưu ý/cảnh báo cho người sau:** Báo cáo phản ánh mã nguồn/tài liệu/worklog hiện hành, không chứa số liệu production thực tế và không phải báo cáo pentest; việc này khác danh sách `VIỆC TIẾP THEO` vì người dùng yêu cầu trực tiếp một báo cáo quản trị DOCX.
-
-### [2026-07-10] Session 25 - Codex
-- **Làm được:** Redeploy Vercel cho bản icon/footer mới; sau phản hồi icon còn nền trắng vuông, đã làm sạch `public/it.png` thành PNG nền trong suốt, crop bớt nền caro cũ, xóa khung trắng/padding/ring khỏi `BrandMark`, rồi deploy lại production.
-- **File thay đổi chính:** `components/portal-shell.tsx`, `public/it.png`, `05-WORKLOG.md`.
-- **Đã test:** `npm.cmd run build` thành công, bao gồm `check:encoding`; `npx.cmd vercel --prod` thành công với deployment cuối `dpl_5UunxueTNNZf5PwRBDw2vpAFr1du` và alias `https://it-help-me.vercel.app`; smoke test `curl.exe -I https://it-help-me.vercel.app/api/state` trả `200 OK`; tải `https://it-help-me.vercel.app/it.png` về kiểm tra `size=1134x1151`, `A00=0`, `length=620174`.
-- **Lưu ý/cảnh báo cho người sau:** Deployment trước đó trong cùng lượt là `dpl_C1qzpWxGYjSpqnYKEhkFXF2H74rP` nhưng đã bị supersede bởi `dpl_5UunxueTNNZf5PwRBDw2vpAFr1du`; nếu trình duyệt còn favicon cũ thì do cache.
-
-### [2026-07-10] Session 24 - Codex
-- **Làm được:** Thêm icon TeamIT Gustino từ `public/it.png` vào metadata favicon/apple/shortcut icon, thay logo lucide cũ ở header dashboard và màn hình đăng nhập bằng ảnh icon mới, thêm footer bản quyền `© 2026 Bản quyền thuộc về TeamIT Gustino` và tagline `Team IT Gustino – Xử lý cực pro!` ở cuối giao diện đăng nhập/dashboard.
-- **File thay đổi chính:** `app/layout.tsx`, `components/portal-shell.tsx`, `public/it.png`, `05-WORKLOG.md`.
-- **Đã test:** `npm.cmd run build` thành công, bao gồm `npm run check:encoding`; chạy thử `npm.cmd run dev -- --hostname 127.0.0.1 --port 3000` lên `Ready` tại `http://127.0.0.1:3000` trong phiên trực tiếp.
-- **Lưu ý/cảnh báo cho người sau:** Chưa deploy production trong session này; dev server khi tách nền bằng `Start-Process` thoát sau khi log `Ready`, nên nếu cần xem live local hãy chạy lệnh dev trực tiếp trong terminal.
