@@ -133,6 +133,7 @@ model DailyReport {
 
   @@index([internId, reportDate])
 }
+
 model ChatMessage {
   id           String      @id @default(uuid())
   departmentId String
@@ -145,4 +146,24 @@ model ChatMessage {
 
   @@index([departmentId, sentAt])
   @@index([senderRole, readAt])
+}
+
+enum ReportType {
+  MORNING
+  EVENING
+}
+
+model WorkReport {
+  id          String     @id @default(uuid())
+  reportDate  DateTime
+  type        ReportType
+  companyName String     @default("")
+  recipient   String     @default("")
+  owner       String     @default("")
+  data        Json       @default("{}") // toàn bộ ReportForm gốc (priorityTasks, followupTasks, tasks, tomorrowPlan...)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([reportDate, type, owner])
+  @@index([reportDate, type])
 }

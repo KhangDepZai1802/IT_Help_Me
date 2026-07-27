@@ -54,11 +54,31 @@
 
 ## NHẬT KÝ SESSION
 
+<<<<<<< HEAD
 ### [2026-07-16] Session 31 - Codex
 - **Làm được:** Pull `origin/master`, merge commit `e613376` vào local `master` bằng merge commit `e704e95`; xử lý xung đột duy nhất tại `app/bao-cao-ngay/page.tsx` bằng cách ưu tiên phiên bản remote, giữ các commit local về Prisma/tài liệu; khôi phục worklog sau stash.
 - **File thay đổi chính:** `app/bao-cao-cuoi-ngay/page.tsx`, `app/bao-cao-ngay/page.tsx`, `components/portal-shell.tsx`, `05-WORKLOG.md`; merge commit còn giữ các thay đổi local trước đó.
 - **Đã test:** Xác nhận `e613376` là ancestor của `HEAD`; `npm.cmd run build` thành công, gồm encoding, TypeScript và 16 route, có `/bao-cao-cuoi-ngay`.
 - **Lưu ý/cảnh báo cho người sau:** Chưa redeploy được vì yêu cầu chạy Vercel bị hệ thống chặn do hết giới hạn sử dụng Codex trước khi lệnh thực thi; production chưa đổi và chưa thể smoke-test route mới. Local `master` đang ahead `origin/master` 3 commit, chưa push vì người dùng chỉ yêu cầu pull và redeploy.
+=======
+### [2026-07-23] Session 27 - Codex
+- **Lam duoc:** Xu ly tiep 3 problem VS Code con hien o `app/api/work-reports/route.ts` bang cach bo phu thuoc truc tiep vao Prisma enum import/delegate type stale: dung literal type `"MORNING" | "EVENING"` va delegate type cuc bo cho `workReport`.
+- **File thay doi chinh:** `app/api/work-reports/route.ts`, `05-WORKLOG.md`.
+- **Da test:** `npx.cmd tsc --noEmit` thanh cong; `npm.cmd run build` thanh cong, bao gom `check:encoding`.
+- **Luu y/canh bao cho nguoi sau:** Prisma Client da co `ReportType`/`workReport`, nhung cach viet moi giup VS Code khong con bao 3 loi cu neu TypeScript server giu cache Prisma.
+
+### [2026-07-23] Session 26 - Codex
+- **Lam duoc:** Kiem tra nguyen nhan VS Code/TypeScript con bao 3 problem. Loi ban dau den tu cache `.next/dev/types/routes.d.ts` bi hong va Next/Turbopack chon nham workspace root `C:\Users\Acer` do co lockfile nam tren thu muc project. Da cau hinh `turbopack.root` ve dung project, sua file routes cache bi lap noi dung, va chay lai `prisma generate` de Prisma Client nhan `ReportType`/`WorkReport`.
+- **File thay doi chinh:** `next.config.mjs`, `next-env.d.ts`, `.next/dev/types/routes.d.ts`, `05-WORKLOG.md`; Prisma Client trong `node_modules/@prisma/client` duoc generate lai.
+- **Da test:** `npx.cmd prisma generate` thanh cong; `npx.cmd tsc --noEmit` thanh cong; `npm.cmd run build` thanh cong, bao gom `check:encoding`.
+- **Luu y/canh bao cho nguoi sau:** Neu VS Code van hien problem cu, reload TypeScript server hoac reload window; CLI da xanh nen do la cache editor.
+
+### [2026-07-10] Session 25 - Codex
+- **Làm được:** Redeploy Vercel cho bản icon/footer mới; sau phản hồi icon còn nền trắng vuông, đã làm sạch `public/it.png` thành PNG nền trong suốt, crop bớt nền caro cũ, xóa khung trắng/padding/ring khỏi `BrandMark`, rồi deploy lại production.
+- **File thay đổi chính:** `components/portal-shell.tsx`, `public/it.png`, `05-WORKLOG.md`.
+- **Đã test:** `npm.cmd run build` thành công, bao gồm `check:encoding`; `npx.cmd vercel --prod` thành công với deployment cuối `dpl_5UunxueTNNZf5PwRBDw2vpAFr1du` và alias `https://it-help-me.vercel.app`; smoke test `curl.exe -I https://it-help-me.vercel.app/api/state` trả `200 OK`; tải `https://it-help-me.vercel.app/it.png` về kiểm tra `size=1134x1151`, `A00=0`, `length=620174`.
+- **Lưu ý/cảnh báo cho người sau:** Deployment trước đó trong cùng lượt là `dpl_C1qzpWxGYjSpqnYKEhkFXF2H74rP` nhưng đã bị supersede bởi `dpl_5UunxueTNNZf5PwRBDw2vpAFr1du`; nếu trình duyệt còn favicon cũ thì do cache.
+>>>>>>> 7a9d85f18329b7c24408d1ed7acb074dd019a474
 
 ### [2026-07-16] Session 30 - Codex
 - **Làm được:** Build và redeploy commit `b533781` lên Vercel production; deployment `dpl_J2iWbtJDo3suarFPLbS7U9ftJaS4` đạt `READY` và được alias về `https://it-help-me.vercel.app`.

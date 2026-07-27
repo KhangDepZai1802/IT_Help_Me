@@ -2,6 +2,7 @@
 
 import {
   forwardRef,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -99,7 +100,7 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
 const STATUS_BADGE: Record<TaskStatus, string> = {
   done: "bg-emerald-700 text-white",
   inprogress: "bg-amber-500 text-emerald-950",
-  pending: "bg-rose-700 text-white",
+  pending: "bg-red-700 text-white",
 };
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
@@ -113,19 +114,19 @@ type Accent = "green" | "amber" | "rose";
 const ACCENT_RIBBON: Record<Accent, string> = {
   green: "from-emerald-950 to-emerald-800",
   amber: "from-amber-600 to-amber-500",
-  rose: "from-rose-800 to-rose-700",
+  rose: "from-red-800 to-red-700",
 };
 
 const ACCENT_BADGE_BG: Record<Accent, string> = {
   green: "bg-emerald-950",
   amber: "bg-amber-500",
-  rose: "bg-rose-800",
+  rose: "bg-red-800",
 };
 
 const ACCENT_ICON_CIRCLE: Record<Accent, string> = {
   green: "bg-emerald-800",
   amber: "bg-amber-500",
-  rose: "bg-rose-700",
+  rose: "bg-red-700",
 };
 
 const SECTION_META: Record<
@@ -134,13 +135,13 @@ const SECTION_META: Record<
 > = {
   done: { number: 1, title: "Kết quả đã hoàn thành", accent: "green", HeaderIcon: CheckCircle2 },
   inprogress: { number: 2, title: "Công việc đang triển khai", accent: "amber", HeaderIcon: Hourglass },
-  pending: { number: 3, title: "Công việc chưa thực hiện / chuyển tiếp", accent: "rose", HeaderIcon: AlertCircle },
+  pending: { number: 3, title: "Chưa thực hiện", accent: "rose", HeaderIcon: AlertCircle },
 };
 
 const STAT_TONES = {
   green: { ring: "ring-emerald-800/10", icon: "bg-emerald-800 text-white" },
   gold: { ring: "ring-amber-500/10", icon: "bg-amber-500 text-white" },
-  red: { ring: "ring-rose-700/10", icon: "bg-rose-700 text-white" },
+  red: { ring: "ring-red-700/10", icon: "bg-red-700 text-white" },
 } as const;
 
 /* ============================================================
@@ -191,7 +192,64 @@ function companyInitials(name: string) {
     .filter(Boolean);
   return (letters.slice(0, 2).join("") || "TD").toUpperCase();
 }
+type MorningTask = {
+  id: string;
+  project: string;
+  category?: string;
+  description?: string;
+  content?: string;
+  due: string;
+  owner?: string;
+  support?: string;
+  status: TaskStatus;
+};
 
+type MorningReport = {
+  reportDate: string;
+  recipient: string;
+  owner: string;
+  priorityTasks: MorningTask[];
+  followupTasks: MorningTask[];
+};
+
+// Dữ liệu báo cáo sáng đến từ API (JSON lưu tự do, không được validate ở
+// backend) — không thể tin tưởng 100% rằng `status` luôn là một trong ba
+// giá trị hợp lệ. Nếu gặp giá trị lạ/rỗng, ép về "pending" thay vì để task
+// rơi ra ngoài mọi nhóm (không có ribbon, không có badge) như trước đây.
+function normalizeStatus(raw: unknown): TaskStatus {
+  if (raw === "done" || raw === "inprogress" || raw === "pending") return raw;
+  return "pending";
+}
+
+function mapMorningToEODTasks(morning: MorningReport): EODTask[] {
+  const fromPriority = morning.priorityTasks.map((t): EODTask => ({
+    id: uid("t"),
+    icon: "generic",
+    project: t.project,
+    code: "",
+    description: t.description ?? "",
+    due: t.due,
+    note: t.category ? `Hạng mục: ${t.category}` : "",
+    support: t.owner ?? "",
+    status: normalizeStatus(t.status),
+    deadlineAdjusted: false,
+  }));
+
+  const fromFollowup = morning.followupTasks.map((t): EODTask => ({
+    id: uid("t"),
+    icon: "generic",
+    project: t.project,
+    code: "",
+    description: t.content ?? "",
+    due: t.due,
+    note: "",
+    support: t.support ?? "",
+    status: normalizeStatus(t.status),
+    deadlineAdjusted: false,
+  }));
+
+  return [...fromPriority, ...fromFollowup];
+}
 function emptyForm(): ReportForm {
   const today = todayISO();
   return {
@@ -298,7 +356,7 @@ function RemoveRowButton({ onClick, label }: { onClick: () => void; label: strin
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-rose-200 text-rose-600 transition hover:bg-rose-50"
+      className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-red-200 text-red-600 transition hover:bg-red-50"
     >
       <Trash2 size={15} />
     </button>
@@ -320,6 +378,9 @@ function AddRowButton({ onClick, label }: { onClick: () => void; label: string }
 
 /* ============================================================
  * Export-only presentational atoms
+ * Chữ trong các component "Export*" bên dưới được thiết kế TO hơn hẳn
+ * bản UI nhập liệu (vì ảnh xuất ra sẽ bị co giãn để lấp khung 9:16 và
+ * người xem thường xem trên màn hình điện thoại nhỏ).
  * ============================================================ */
 
 function ExportStatCard({
@@ -335,12 +396,12 @@ function ExportStatCard({
 }) {
   const t = STAT_TONES[tone];
   return (
-    <div className={`flex flex-col items-center gap-2 rounded-xl bg-white px-3 py-4 ring-1 ${t.ring}`}>
-      <span className={`flex size-11 items-center justify-center rounded-full ${t.icon}`}>
-        <Icon size={20} strokeWidth={2.4} />
+    <div className={`flex flex-col items-center gap-2 rounded-xl bg-white px-3 py-5 ring-1 ${t.ring}`}>
+      <span className={`flex size-14 items-center justify-center rounded-full ${t.icon}`}>
+        <Icon size={26} strokeWidth={2.4} />
       </span>
-      <span className="text-3xl font-black text-slate-900 tabular-nums">{value}</span>
-      <span className="text-center text-[11px] font-bold leading-tight text-slate-500">{label}</span>
+      <span className="text-4xl font-black text-slate-900 tabular-nums">{value}</span>
+      <span className="text-center text-sm font-bold leading-tight text-slate-500">{label}</span>
     </div>
   );
 }
@@ -358,58 +419,63 @@ function ExportSectionRibbon({
 }) {
   return (
     <div className="flex items-stretch overflow-hidden rounded-lg">
-      <div className={`flex w-11 shrink-0 items-center justify-center text-lg font-black text-white ${ACCENT_BADGE_BG[accent]}`}>
+      <div className={`flex w-14 shrink-0 items-center justify-center text-2xl font-black text-white ${ACCENT_BADGE_BG[accent]}`}>
         {number}
       </div>
       <div
-        className={`flex flex-1 items-center justify-between bg-gradient-to-r px-4 py-2.5 ${ACCENT_RIBBON[accent]}`}
+        className={`flex flex-1 items-center justify-between bg-gradient-to-r px-5 py-3.5 ${ACCENT_RIBBON[accent]}`}
         style={{ clipPath: "polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%)" }}
       >
-        <span className="text-sm font-black uppercase tracking-wider text-white">{title}</span>
-        <HeaderIcon size={18} className="text-white/90" />
+        <span className="text-lg font-black uppercase tracking-wider text-white">{title}</span>
+        <HeaderIcon size={22} className="text-white/90" />
       </div>
     </div>
   );
 }
 
+// LƯU Ý: card này chỉ dùng trong khung xuất ảnh có kích thước pixel cố
+// định (1080px), không phải trang web responsive thật, nên KHÔNG dùng
+// prefix "sm:" — luôn là bố cục hàng ngang bất kể kích thước màn hình
+// người xem ảnh. Cỡ chữ đã tăng đáng kể so với bản gốc để đọc rõ trên
+// điện thoại (ảnh sẽ được co giãn lấp đầy khung 9:16 khi xuất).
 function ExportTaskRow({ task, accent }: { task: EODTask; accent: Accent }) {
   const RowIcon = iconFor(task.icon);
   return (
-    <div className="flex flex-col gap-2 border-b border-slate-100 py-3 last:border-b-0 sm:flex-row sm:items-start sm:gap-4">
+    <div className="flex flex-row items-center gap-6 border-b border-slate-100 py-6 last:border-b-0">
       <span
-        className={`flex size-10 shrink-0 items-center justify-center rounded-full text-white ${ACCENT_ICON_CIRCLE[accent]}`}
+        className={`flex size-16 shrink-0 items-center justify-center rounded-full text-white ${ACCENT_ICON_CIRCLE[accent]}`}
       >
-        <RowIcon size={18} />
+        <RowIcon size={30} />
       </span>
 
-      <div className="min-w-0 flex-1 sm:basis-40 sm:flex-none">
-        <p className="text-sm font-black text-emerald-900">{task.project || "—"}</p>
+      <div className="min-w-0 shrink-0 basis-[240px]">
+        <p className="text-3xl font-black leading-snug text-emerald-900 break-words">{task.project || "—"}</p>
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-slate-700">
-          {task.code ? <span className="mr-1 font-black text-slate-400">{task.code}</span> : null}
+        <p className="text-2xl font-semibold leading-snug text-slate-700 break-words">
+          {task.code ? <span className="mr-2 font-black text-slate-400">{task.code}</span> : null}
           {task.description || "—"}
         </p>
         {task.support ? (
-          <p className="mt-0.5 text-xs font-bold text-slate-500">Hỗ trợ: {task.support}</p>
+          <p className="mt-1.5 text-lg font-bold text-slate-500 break-words">Hỗ trợ: {task.support}</p>
         ) : null}
         {task.note ? (
-          <p className="mt-0.5 flex items-start gap-1 text-xs font-semibold italic text-slate-400">
-            <StickyNote size={12} className="mt-0.5 shrink-0" />
+          <p className="mt-1.5 flex items-start gap-2 text-lg font-semibold italic text-slate-400 break-words">
+            <StickyNote size={19} className="mt-1 shrink-0" />
             {task.note}
           </p>
         ) : null}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5 text-xs font-bold text-slate-600 sm:w-32">
-        <CalendarDays size={13} className="text-emerald-800" />
+      <div className="flex w-52 shrink-0 items-center gap-2.5 text-xl font-bold text-slate-600">
+        <CalendarDays size={24} className="shrink-0 text-emerald-800" />
         {formatDateDisplay(task.due) || "–"}
       </div>
 
-      <div className="shrink-0 sm:w-32">
+      <div className="w-48 shrink-0">
         <span
-          className={`inline-flex w-full items-center justify-center rounded-lg px-2.5 py-1.5 text-center text-[11px] font-black leading-tight ${STATUS_BADGE[task.status]}`}
+          className={`inline-flex w-full items-center justify-center rounded-lg px-3 py-3.5 text-center text-lg font-black leading-tight ${STATUS_BADGE[task.status]}`}
         >
           {STATUS_LABEL[task.status]}
         </span>
@@ -423,8 +489,17 @@ function ExportTaskRow({ task, accent }: { task: EODTask; accent: Accent }) {
  * ============================================================ */
 
 const EXPORT_IMAGE_WIDTH = 1080;
-const EXPORT_IMAGE_PADDING = 10;
+const EXPORT_IMAGE_HEIGHT = 1920; // Tỉ lệ 9:16 chuẩn story/Zalo — KHÔNG đổi,
+// khung ảnh xuất ra luôn giữ đúng tỉ lệ này dù nội dung dài hay ngắn.
+const EXPORT_IMAGE_PADDING = 24;
 const EXPORT_CONTENT_WIDTH = EXPORT_IMAGE_WIDTH - EXPORT_IMAGE_PADDING * 2;
+// Giới hạn mức phóng to tối đa để tránh chữ bị quá khổ khi nội dung ngắn,
+// và mức thu nhỏ tối thiểu để chữ KHÔNG bị bé đến mức khó đọc khi nội
+// dung dài (đây là phần quan trọng nhất để chữ luôn to, dễ nhìn trên
+// điện thoại — nếu nội dung quá dài để vừa khung ở mức thu nhỏ tối
+// thiểu, ảnh sẽ tràn nhẹ ra ngoài khung thay vì ép chữ nhỏ xíu).
+const EXPORT_MAX_SCALE = 1.6;
+const EXPORT_MIN_SCALE = 0.72;
 
 const ReportExportCard = forwardRef<
   HTMLDivElement,
@@ -452,19 +527,23 @@ const ReportExportCard = forwardRef<
   const visiblePlan = form.tomorrowPlan.map((n) => n.trim()).filter(Boolean);
 
   return (
-    <div ref={ref} style={{ width: EXPORT_IMAGE_WIDTH }} className="relative overflow-hidden bg-slate-100">
+    <div
+      ref={ref}
+      style={{ width: EXPORT_IMAGE_WIDTH, height: EXPORT_IMAGE_HEIGHT }}
+      className="relative overflow-hidden bg-slate-100"
+    >
       <div
         ref={contentRef}
-        style={{ width: EXPORT_CONTENT_WIDTH, left: EXPORT_IMAGE_PADDING, top: EXPORT_IMAGE_PADDING }}
-        className="relative overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200"
+        style={{ width: EXPORT_CONTENT_WIDTH }}
+        className="absolute overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200"
       >
         {/* Header */}
-        <header className="relative overflow-hidden bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-800 px-9 pb-8 pt-6">
+        <header className="relative overflow-hidden bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-800 px-9 pb-9 pt-7">
           <div className="mb-6 flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-amber-400 text-sm font-black text-amber-400">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-amber-400 text-base font-black text-amber-400">
               {companyInitials(form.companyName)}
             </span>
-            <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.25em] text-white">
+            <p className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.25em] text-white">
               {form.companyName}
               <span className="text-amber-400/70">•</span>
               <span className="text-white/70">Báo cáo công việc</span>
@@ -473,19 +552,19 @@ const ReportExportCard = forwardRef<
 
           <div className="flex items-end justify-between gap-4">
             <div className="max-w-lg">
-              <h1 className="text-5xl font-black uppercase leading-[1.05] tracking-tight text-white">
+              <h1 className="text-6xl font-black uppercase leading-[1.05] tracking-tight text-white">
                 Báo cáo cuối ngày
               </h1>
-              <p className="mt-2 text-sm font-bold uppercase tracking-wide text-emerald-200/80">
+              <p className="mt-2.5 text-base font-bold uppercase tracking-wide text-emerald-200/80">
                 Tổng hợp kết quả triển khai ngày {today.dateStr}
               </p>
             </div>
 
-            <div className="flex items-center gap-3 rounded-xl bg-emerald-800/60 px-4 py-3 ring-1 ring-white/10">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-amber-400">
-                <CalendarDays size={20} />
+            <div className="flex items-center gap-3 rounded-xl bg-emerald-800/60 px-4 py-3.5 ring-1 ring-white/10">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-white/10 text-amber-400">
+                <CalendarDays size={22} />
               </span>
-              <p className="text-sm font-black leading-tight text-white">
+              <p className="text-base font-black leading-tight text-white">
                 {today.weekday},
                 <br />
                 ngày {today.dateStr}
@@ -497,16 +576,16 @@ const ReportExportCard = forwardRef<
         </header>
 
         {/* Body */}
-        <div className="space-y-5 px-8 py-7">
-          <div className="flex items-start gap-4 rounded-xl bg-emerald-50/70 p-4 ring-1 ring-emerald-100">
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-white">
-              <UserRound size={22} />
+        <div className="space-y-6 px-8 py-8">
+          <div className="flex items-start gap-4 rounded-xl bg-emerald-50/70 p-5 ring-1 ring-emerald-100">
+            <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-white">
+              <UserRound size={26} />
             </span>
             <div>
-              <p className="text-lg font-black text-emerald-950">
+              <p className="text-xl font-black text-emerald-950">
                 Kính gửi {form.recipient || "..."},
               </p>
-              <p className="mt-0.5 text-sm font-semibold text-slate-500">{form.intro}</p>
+              <p className="mt-1 text-base font-semibold text-slate-500">{form.intro}</p>
             </div>
           </div>
 
@@ -530,7 +609,7 @@ const ReportExportCard = forwardRef<
                   accent={meta.accent}
                   HeaderIcon={meta.HeaderIcon}
                 />
-                <div className="rounded-xl bg-white px-4 ring-1 ring-slate-200">
+                <div className="rounded-xl bg-white px-5 ring-1 ring-slate-200">
                   {list.map((task) => (
                     <ExportTaskRow key={task.id} task={task} accent={meta.accent} />
                   ))}
@@ -539,35 +618,35 @@ const ReportExportCard = forwardRef<
             );
           })}
 
-          <div className="relative overflow-hidden rounded-xl border border-amber-300/70 bg-amber-50/50 p-4">
-            <TrendingUp size={72} className="pointer-events-none absolute -right-2 -top-2 text-amber-200" />
-            <div className="relative mb-2 flex items-center gap-2">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-950 text-white">
-                <Target size={16} />
+          <div className="relative overflow-hidden rounded-xl border border-amber-300/70 bg-amber-50/50 p-5">
+            <TrendingUp size={84} className="pointer-events-none absolute -right-2 -top-2 text-amber-200" />
+            <div className="relative mb-3 flex items-center gap-2.5">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-950 text-white">
+                <Target size={18} />
               </span>
-              <p className="text-sm font-black uppercase tracking-wide text-emerald-950">Định hướng ngày mai</p>
+              <p className="text-base font-black uppercase tracking-wide text-emerald-950">Định hướng ngày mai</p>
             </div>
             {visiblePlan.length ? (
-              <ul className="relative space-y-1.5 pl-1">
+              <ul className="relative space-y-2 pl-1">
                 {visiblePlan.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm font-semibold text-slate-600">
-                    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-amber-500" />
+                  <li key={i} className="flex items-start gap-2.5 text-lg font-semibold text-slate-600">
+                    <span className="mt-2.5 size-2 shrink-0 rounded-full bg-amber-500" />
                     {item}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="relative text-sm font-semibold italic text-slate-400">Chưa có định hướng</p>
+              <p className="relative text-lg font-semibold italic text-slate-400">Chưa có định hướng</p>
             )}
           </div>
         </div>
 
         {/* Footer */}
-        <footer className="flex items-center gap-3 bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-800 px-8 py-4">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-amber-400">
-            <PenLine size={16} />
+        <footer className="flex items-center gap-3 bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-800 px-8 py-5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-amber-400">
+            <PenLine size={18} />
           </span>
-          <p className="text-sm font-bold text-white">
+          <p className="text-base font-bold text-white">
             Người phụ trách: <span className="font-black">{form.owner || "—"}</span>
           </p>
         </footer>
@@ -590,6 +669,65 @@ export default function BaoCaoCuoiNgayFormPage() {
   // phải mở ảnh ra để người dùng tự nhấn giữ và lưu. previewUrl lưu
   // đường dẫn ảnh đó để hiển thị cho người dùng.
   const [previewUrl, setPreviewUrl] = useState<string>("");
+
+  /* ---- Chọn người dùng để lấy đúng báo cáo sáng (nhiều người dùng chung form) ---- */
+  const [morningOwners, setMorningOwners] = useState<string[]>([]);
+  const [ownersLoading, setOwnersLoading] = useState(true);
+  const [selectedOwner, setSelectedOwner] = useState("");
+  const [loadingMorning, setLoadingMorning] = useState(false);
+  const [morningLoadError, setMorningLoadError] = useState("");
+
+  // Bước 1: khi mở trang, chỉ lấy DANH SÁCH TÊN đã gửi báo cáo sáng hôm nay
+  // (chưa lấy nội dung công việc), để hỏi người dùng "Bạn là ai?".
+  useEffect(() => {
+    async function loadOwners() {
+      try {
+        const res = await fetch(`/api/work-reports?date=${todayISO()}&type=morning`);
+        if (!res.ok) return;
+        const result: { owners: string[] } = await res.json();
+        setMorningOwners(result.owners ?? []);
+      } catch {
+        // im lặng — không chặn người dùng nhập tay nếu fetch lỗi
+      } finally {
+        setOwnersLoading(false);
+      }
+    }
+    loadOwners();
+  }, []);
+
+  // Bước 2: khi người dùng chọn đúng tên mình, mới lấy nội dung công việc
+  // của riêng người đó trong báo cáo sáng, rồi tự động điền vào form.
+  async function handleSelectOwner(owner: string) {
+    setSelectedOwner(owner);
+    setMorningLoadError("");
+    setLoadingMorning(true);
+    try {
+      const res = await fetch(
+        `/api/work-reports?date=${todayISO()}&type=morning&owner=${encodeURIComponent(owner)}`,
+      );
+      if (!res.ok) {
+        setMorningLoadError("Không tìm thấy báo cáo sáng của " + owner + ".");
+        return;
+      }
+      const morning: MorningReport = await res.json();
+      setForm((prev) => ({
+        ...prev,
+        recipient: morning.recipient || prev.recipient,
+        owner: morning.owner || owner,
+        tasks: mapMorningToEODTasks(morning),
+      }));
+    } catch {
+      setMorningLoadError("Không thể tải báo cáo sáng. Vui lòng thử lại.");
+    } finally {
+      setLoadingMorning(false);
+    }
+  }
+
+  // Trường hợp không thấy tên mình trong danh sách (ví dụ chưa viết báo cáo
+  // sáng, hoặc gõ tên khác lúc sáng) — cho phép bỏ qua và điền tay từ đầu.
+  function handleSkipOwnerPicker() {
+    setSelectedOwner("__manual__");
+  }
 
   const exportCardRef = useRef<HTMLDivElement>(null);
   const exportContentRef = useRef<HTMLDivElement>(null);
@@ -673,26 +811,61 @@ export default function BaoCaoCuoiNgayFormPage() {
         await document.fonts.ready;
       }
 
+      // Reset transform/scale trước khi đo, để lấy đúng chiều cao tự nhiên
+      // của nội dung (chưa co giãn).
+      exportContent.style.transform = "none";
+      exportContent.style.left = "0px";
+      exportContent.style.top = "0px";
+
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-      const contentHeight = exportContent.scrollHeight;
-      const finalHeight = contentHeight + EXPORT_IMAGE_PADDING * 2;
-      exportFrame.style.height = `${finalHeight}px`;
+      const naturalContentHeight = exportContent.scrollHeight;
+      const availableWidth = EXPORT_IMAGE_WIDTH - EXPORT_IMAGE_PADDING * 2;
+      const availableHeight = EXPORT_IMAGE_HEIGHT - EXPORT_IMAGE_PADDING * 2;
+
+      // Co giãn nội dung để lấp đầy khung ảnh cố định tỉ lệ 9:16 mà không
+      // làm méo tỉ lệ chữ/khoảng cách — chỉ scale đều theo chiều cao,
+      // giới hạn trong khoảng [EXPORT_MIN_SCALE, EXPORT_MAX_SCALE]. Nhờ
+      // EXPORT_MIN_SCALE được nâng lên, chữ sẽ không bao giờ bị ép nhỏ
+      // đến mức khó đọc — nếu nội dung quá dài, ảnh sẽ hơi tràn khỏi
+      // khung 1920px thay vì thu nhỏ chữ quá mức.
+      const rawScale = availableHeight / naturalContentHeight;
+      const scale = Math.min(EXPORT_MAX_SCALE, Math.max(EXPORT_MIN_SCALE, rawScale));
+
+      const scaledWidth = availableWidth * scale;
+      const scaledHeight = naturalContentHeight * scale;
+      const left = Math.max(0, (EXPORT_IMAGE_WIDTH - scaledWidth) / 2);
+      const top = Math.max(0, (EXPORT_IMAGE_HEIGHT - scaledHeight) / 2);
+
+      // Nếu nội dung (sau khi scale ở mức tối thiểu cho phép) vẫn cao hơn
+      // khung ảnh cố định, ta giãn khung ảnh ra theo chiều cao thực tế
+      // thay vì cắt mất nội dung — vẫn giữ đúng chiều rộng 1080px, chỉ
+      // chiều cao vượt 1920 khi thật sự cần (trường hợp danh sách rất dài).
+      const finalCanvasHeight = Math.max(EXPORT_IMAGE_HEIGHT, top * 2 + scaledHeight + EXPORT_IMAGE_PADDING);
+      exportFrame.style.height = `${finalCanvasHeight}px`;
+
+      exportContent.style.left = `${left}px`;
+      exportContent.style.top = `${top}px`;
+      exportContent.style.transform = `scale(${scale})`;
+      exportContent.style.transformOrigin = "top left";
 
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
 
-      // Dùng toBlob thay vì toPng: ảnh 1080px x2 pixel ratio khá nặng dưới
-      // dạng base64 dataURL, dễ khiến trình duyệt di động (đặc biệt Safari)
-      // treo hoặc rớt link tải. Blob nhẹ hơn và dùng được với Web Share API.
+      // Dùng toBlob thay vì toPng: ảnh 1080x1920 x2 pixel ratio dưới dạng
+      // base64 dataURL khá nặng, dễ khiến trình duyệt di động (đặc biệt
+      // Safari) treo hoặc rớt link tải. Blob nhẹ hơn và ổn định hơn.
       const blob = await toBlob(exportFrame, {
         width: EXPORT_IMAGE_WIDTH,
-        height: finalHeight,
+        height: finalCanvasHeight,
         pixelRatio: 2,
         cacheBust: true,
         backgroundColor: "#f1f5f9",
       });
+
+      // Khôi phục lại chiều cao khung cố định 9:16 cho lần render tiếp theo.
+      exportFrame.style.height = `${EXPORT_IMAGE_HEIGHT}px`;
 
       if (!blob) {
         throw new Error("Không thể tạo ảnh.");
@@ -738,10 +911,10 @@ export default function BaoCaoCuoiNgayFormPage() {
     setSaveError("");
     setSaveSuccess(false);
     try {
-      const response = await fetch("/api/eod-reports", {
+      const response = await fetch("/api/work-reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, stats }),
+        body: JSON.stringify({ ...form, type: "evening", stats }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => null);
@@ -758,6 +931,82 @@ export default function BaoCaoCuoiNgayFormPage() {
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl space-y-4">
+        {/* ===== Chọn người dùng để lấy đúng báo cáo sáng ===== */}
+        {!ownersLoading && selectedOwner === "" ? (
+          <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
+            <p className="mb-3 text-sm font-black uppercase tracking-wide text-emerald-950">
+              Bạn là ai?
+            </p>
+            {morningOwners.length ? (
+              <>
+                <p className="mb-3 text-xs font-semibold text-slate-500">
+                  Chọn đúng tên bạn để tự động lấy công việc từ báo cáo sáng nay.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {morningOwners.map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => handleSelectOwner(name)}
+                      className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-800 transition hover:bg-emerald-100"
+                    >
+                      {name}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleSkipOwnerPicker}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-black text-slate-500 transition hover:bg-slate-50"
+                  >
+                    Không thấy tên tôi
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="mb-3 text-xs font-semibold text-slate-500">
+                  Chưa có ai gửi báo cáo sáng hôm nay. Bạn có thể điền tay từ đầu.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleSkipOwnerPicker}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-black text-slate-600 transition hover:bg-slate-50"
+                >
+                  Điền tay từ đầu
+                </button>
+              </>
+            )}
+          </div>
+        ) : null}
+
+        {loadingMorning ? (
+          <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 ring-1 ring-emerald-100">
+            Đang tải công việc từ báo cáo sáng...
+          </div>
+        ) : null}
+
+        {morningLoadError ? (
+          <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600 ring-1 ring-red-100">
+            {morningLoadError}
+          </div>
+        ) : null}
+
+        {selectedOwner && selectedOwner !== "__manual__" ? (
+          <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-600 ring-1 ring-slate-200">
+            <span>
+              Đang điền theo báo cáo sáng của:{" "}
+              <span className="font-black text-emerald-800">{selectedOwner}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedOwner("")}
+              className="text-xs font-black text-emerald-700 hover:underline"
+            >
+              Đổi
+            </button>
+          </div>
+        ) : null}
+
         {/* ===== Header nhập liệu ===== */}
         <div className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex-1 space-y-3">
@@ -946,7 +1195,7 @@ export default function BaoCaoCuoiNgayFormPage() {
 
         {/* ===== Trạng thái lưu / lỗi ===== */}
         {saveError ? (
-          <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600 ring-1 ring-rose-100">
+          <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600 ring-1 ring-red-100">
             {saveError}
           </div>
         ) : null}
@@ -974,7 +1223,15 @@ export default function BaoCaoCuoiNgayFormPage() {
             {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
             {isExporting ? "Đang xuất ảnh..." : "Xuất ảnh (Zalo)"}
           </button>
-        
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSaving}
+            className="flex h-11 items-center gap-2 rounded-xl bg-gradient-to-br from-emerald-800 to-emerald-700 px-5 text-sm font-black text-white shadow-md shadow-emerald-800/25 transition hover:from-emerald-900 hover:to-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {isSaving ? "Đang lưu..." : "Lưu báo cáo"}
+          </button>
         </div>
 
         {/* ===== Card ẩn để xuất ảnh ===== */}
