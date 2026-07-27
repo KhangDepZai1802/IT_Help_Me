@@ -53,6 +53,18 @@
 
 ## NHẬT KÝ SESSION
 
+### [2026-07-23] Session 27 - Codex
+- **Lam duoc:** Xu ly tiep 3 problem VS Code con hien o `app/api/work-reports/route.ts` bang cach bo phu thuoc truc tiep vao Prisma enum import/delegate type stale: dung literal type `"MORNING" | "EVENING"` va delegate type cuc bo cho `workReport`.
+- **File thay doi chinh:** `app/api/work-reports/route.ts`, `05-WORKLOG.md`.
+- **Da test:** `npx.cmd tsc --noEmit` thanh cong; `npm.cmd run build` thanh cong, bao gom `check:encoding`.
+- **Luu y/canh bao cho nguoi sau:** Prisma Client da co `ReportType`/`workReport`, nhung cach viet moi giup VS Code khong con bao 3 loi cu neu TypeScript server giu cache Prisma.
+
+### [2026-07-23] Session 26 - Codex
+- **Lam duoc:** Kiem tra nguyen nhan VS Code/TypeScript con bao 3 problem. Loi ban dau den tu cache `.next/dev/types/routes.d.ts` bi hong va Next/Turbopack chon nham workspace root `C:\Users\Acer` do co lockfile nam tren thu muc project. Da cau hinh `turbopack.root` ve dung project, sua file routes cache bi lap noi dung, va chay lai `prisma generate` de Prisma Client nhan `ReportType`/`WorkReport`.
+- **File thay doi chinh:** `next.config.mjs`, `next-env.d.ts`, `.next/dev/types/routes.d.ts`, `05-WORKLOG.md`; Prisma Client trong `node_modules/@prisma/client` duoc generate lai.
+- **Da test:** `npx.cmd prisma generate` thanh cong; `npx.cmd tsc --noEmit` thanh cong; `npm.cmd run build` thanh cong, bao gom `check:encoding`.
+- **Luu y/canh bao cho nguoi sau:** Neu VS Code van hien problem cu, reload TypeScript server hoac reload window; CLI da xanh nen do la cache editor.
+
 ### [2026-07-10] Session 25 - Codex
 - **Làm được:** Redeploy Vercel cho bản icon/footer mới; sau phản hồi icon còn nền trắng vuông, đã làm sạch `public/it.png` thành PNG nền trong suốt, crop bớt nền caro cũ, xóa khung trắng/padding/ring khỏi `BrandMark`, rồi deploy lại production.
 - **File thay đổi chính:** `components/portal-shell.tsx`, `public/it.png`, `05-WORKLOG.md`.
