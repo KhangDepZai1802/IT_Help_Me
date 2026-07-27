@@ -1079,31 +1079,31 @@ export default function BaoCaoCuoiNgayFormPage() {
           <div className="space-y-3">
             {form.tasks.map((task) => (
               <div key={task.id} className="rounded-lg border border-slate-200 p-3">
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[140px_1fr_1fr_70px] sm:items-start">
-                  <div>
-                    <FieldLabel>Loại</FieldLabel>
-                    <IconSelect value={task.icon} onChange={(v) => updateTask(task.id, { icon: v })} />
-                  </div>
-                  <div>
-                    <FieldLabel>Dự án</FieldLabel>
-                    <TextField
-                      value={task.project}
-                      onChange={(v) => updateTask(task.id, { project: v })}
-                      placeholder="Hạt Dẻ Ông Lý"
-                    />
-                  </div>
-                  <div>
-                    <FieldLabel>Mã đầu việc</FieldLabel>
-                    <TextField
-                      value={task.code}
-                      onChange={(v) => updateTask(task.id, { code: v })}
-                      placeholder="1.1"
-                    />
-                  </div>
-                  <div className="flex items-end justify-center">
-                    <RemoveRowButton onClick={() => removeTask(task.id)} label="Xoá công việc" />
-                  </div>
-                </div>
+               <div className="grid grid-cols-1 gap-2 sm:grid-cols-[100px_140px_1fr_70px] sm:items-start">
+  <div>
+    <FieldLabel>Mã đầu việc</FieldLabel>
+    <TextField
+      value={task.code}
+      onChange={(v) => updateTask(task.id, { code: v })}
+      placeholder="1.1"
+    />
+  </div>
+  <div>
+    <FieldLabel>Loại</FieldLabel>
+    <IconSelect value={task.icon} onChange={(v) => updateTask(task.id, { icon: v })} />
+  </div>
+  <div>
+    <FieldLabel>Dự án</FieldLabel>
+    <TextField
+      value={task.project}
+      onChange={(v) => updateTask(task.id, { project: v })}
+      placeholder="Hạt Dẻ Ông Lý"
+    />
+  </div>
+  <div className="flex items-end justify-center">
+    <RemoveRowButton onClick={() => removeTask(task.id)} label="Xoá công việc" />
+  </div>
+</div>
 
                 <div className="mt-2">
                   <FieldLabel>Mô tả</FieldLabel>
