@@ -282,7 +282,7 @@ function emptyForm(): ReportForm {
 
 function FieldLabel({ children }: { children: ReactNode }) {
   return (
-    <label className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-400">
+    <label className="mb-1 block text-xs font-black uppercase tracking-wide text-slate-950">
       {children}
     </label>
   );
@@ -302,7 +302,31 @@ function TextField({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none placeholder:font-normal placeholder:text-slate-300 focus:border-emerald-600"
+      className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-semibold text-slate-950 outline-none placeholder:font-normal placeholder:text-slate-600 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
+    />
+  );
+}
+
+function TextAreaField({
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+  className = "",
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  rows?: number;
+  className?: string;
+}) {
+  return (
+    <textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={rows}
+      className={`w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-3 text-base font-semibold leading-relaxed text-slate-950 outline-none placeholder:font-normal placeholder:text-slate-600 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15 ${className}`}
     />
   );
 }
@@ -313,7 +337,7 @@ function DateField({ value, onChange }: { value: string; onChange: (v: string) =
       type="date"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-emerald-600 [color-scheme:light]"
+      className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-semibold text-slate-950 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15 [color-scheme:light]"
     />
   );
 }
@@ -323,7 +347,7 @@ function StatusSelect({ value, onChange }: { value: TaskStatus; onChange: (v: Ta
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as TaskStatus)}
-      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-emerald-600"
+      className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-bold text-slate-950 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
     >
       {STATUS_OPTIONS.map((opt) => (
         <option key={opt.value} value={opt.value}>
@@ -339,7 +363,7 @@ function IconSelect({ value, onChange }: { value: IconKey; onChange: (v: IconKey
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as IconKey)}
-      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-emerald-600"
+      className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-bold text-slate-950 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
     >
       {ICON_OPTIONS.map((opt) => (
         <option key={opt.value} value={opt.value}>
@@ -356,9 +380,9 @@ function RemoveRowButton({ onClick, label }: { onClick: () => void; label: strin
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-red-200 text-red-600 transition hover:bg-red-50"
+      className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-red-300 bg-white text-red-700 transition duration-200 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 active:bg-red-100"
     >
-      <Trash2 size={15} />
+      <Trash2 size={18} />
     </button>
   );
 }
@@ -368,9 +392,9 @@ function AddRowButton({ onClick, label }: { onClick: () => void; label: string }
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 rounded-lg border border-dashed border-emerald-300 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-50"
+      className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-dashed border-emerald-500 bg-white px-4 py-2.5 text-sm font-black text-emerald-800 transition duration-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 active:bg-emerald-100"
     >
-      <Plus size={14} />
+      <Plus size={18} />
       {label}
     </button>
   );
@@ -400,8 +424,31 @@ function ExportStatCard({
       <span className={`flex size-14 items-center justify-center rounded-full ${t.icon}`}>
         <Icon size={26} strokeWidth={2.4} />
       </span>
-      <span className="text-4xl font-black text-slate-900 tabular-nums">{value}</span>
-      <span className="text-center text-sm font-bold leading-tight text-slate-500">{label}</span>
+      <span className="text-4xl font-black text-slate-950 tabular-nums">{value}</span>
+      <span className="text-center text-sm font-bold leading-tight text-slate-950">{label}</span>
+    </div>
+  );
+}
+
+function ExportStatCardCompact({
+  label,
+  value,
+  Icon,
+  tone,
+}: {
+  label: string;
+  value: number;
+  Icon: typeof ClipboardList;
+  tone: keyof typeof STAT_TONES;
+}) {
+  const t = STAT_TONES[tone];
+  return (
+    <div className="flex min-h-[78px] flex-col items-center justify-center gap-0.5 bg-white px-2 py-2">
+      <span className={`flex size-7 items-center justify-center rounded-full ${t.icon}`}>
+        <Icon size={15} strokeWidth={2.4} />
+      </span>
+      <span className="text-xl font-black leading-none text-slate-950 tabular-nums">{value}</span>
+      <span className="text-center text-xs font-bold leading-tight text-slate-950">{label}</span>
     </div>
   );
 }
@@ -419,92 +466,96 @@ function ExportSectionRibbon({
 }) {
   return (
     <div className="flex items-stretch overflow-hidden rounded-lg">
-      <div className={`flex w-14 shrink-0 items-center justify-center text-2xl font-black text-white ${ACCENT_BADGE_BG[accent]}`}>
+      <div className={`flex w-12 shrink-0 items-center justify-center text-xl font-black text-white ${ACCENT_BADGE_BG[accent]}`}>
         {number}
       </div>
       <div
-        className={`flex flex-1 items-center justify-between bg-gradient-to-r px-5 py-3.5 ${ACCENT_RIBBON[accent]}`}
+        className={`flex flex-1 items-center justify-between bg-gradient-to-r px-4 py-2.5 ${ACCENT_RIBBON[accent]}`}
         style={{ clipPath: "polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%)" }}
       >
-        <span className="text-lg font-black uppercase tracking-wider text-white">{title}</span>
-        <HeaderIcon size={22} className="text-white/90" />
+        <span className="text-base font-black uppercase tracking-wider text-white">{title}</span>
+        <HeaderIcon size={20} className="text-white/90" />
       </div>
     </div>
   );
 }
 
-// LƯU Ý: card này chỉ dùng trong khung xuất ảnh có kích thước pixel cố
-// định (1080px), không phải trang web responsive thật, nên KHÔNG dùng
-// prefix "sm:" — luôn là bố cục hàng ngang bất kể kích thước màn hình
-// người xem ảnh. Cỡ chữ đã tăng đáng kể so với bản gốc để đọc rõ trên
-// điện thoại (ảnh sẽ được co giãn lấp đầy khung 9:16 khi xuất).
+// Mô tả là nội dung chính nên luôn chiếm trọn chiều ngang. Dự án/trạng thái
+// ở hàng đầu; hạn, hỗ trợ và ghi chú nằm ở tầng metadata phía dưới.
 function ExportTaskRow({ task, accent }: { task: EODTask; accent: Accent }) {
   const RowIcon = iconFor(task.icon);
   return (
-    <div className="flex flex-row items-center gap-6 border-b border-slate-100 py-6 last:border-b-0">
-      <span
-        className={`flex size-16 shrink-0 items-center justify-center rounded-full text-white ${ACCENT_ICON_CIRCLE[accent]}`}
-      >
-        <RowIcon size={30} />
-      </span>
-
-      <div className="min-w-0 shrink-0 basis-[240px]">
-        <p className="text-3xl font-black leading-snug text-emerald-900 break-words">{task.project || "—"}</p>
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <p className="text-2xl font-semibold leading-snug text-slate-700 break-words">
-          {task.code ? <span className="mr-2 font-black text-slate-400">{task.code}</span> : null}
-          {task.description || "—"}
-        </p>
-        {task.support ? (
-          <p className="mt-1.5 text-lg font-bold text-slate-500 break-words">Hỗ trợ: {task.support}</p>
-        ) : null}
-        {task.note ? (
-          <p className="mt-1.5 flex items-start gap-2 text-lg font-semibold italic text-slate-400 break-words">
-            <StickyNote size={19} className="mt-1 shrink-0" />
-            {task.note}
-          </p>
-        ) : null}
-      </div>
-
-      <div className="flex w-52 shrink-0 items-center gap-2.5 text-xl font-bold text-slate-600">
-        <CalendarDays size={24} className="shrink-0 text-emerald-800" />
-        {formatDateDisplay(task.due) || "–"}
-      </div>
-
-      <div className="w-48 shrink-0">
+    <div className="grid grid-cols-[minmax(0,1fr)_170px] items-start gap-x-4 gap-y-3 rounded-xl border border-emerald-950/15 bg-white p-4 shadow-sm">
+      <div className="flex min-w-0 items-start gap-3">
         <span
-          className={`inline-flex w-full items-center justify-center rounded-lg px-3 py-3.5 text-center text-lg font-black leading-tight ${STATUS_BADGE[task.status]}`}
+          className={`flex size-11 shrink-0 items-center justify-center rounded-full text-white ${ACCENT_ICON_CIRCLE[accent]}`}
+        >
+          <RowIcon size={20} />
+        </span>
+        <div className="min-w-0">
+          {task.code ? (
+            <p className="mb-0.5 text-xs font-black uppercase tracking-[0.14em] text-emerald-800">
+              Đầu việc {task.code}
+            </p>
+          ) : null}
+          <p className="break-words text-2xl font-black leading-tight text-emerald-950">
+            {task.project || "—"}
+          </p>
+        </div>
+      </div>
+
+      <div className="w-[170px]">
+        <span
+          className={`inline-flex w-full items-center justify-center rounded-lg px-3 py-2.5 text-center text-base font-black leading-tight ${STATUS_BADGE[task.status]}`}
         >
           {STATUS_LABEL[task.status]}
         </span>
       </div>
+
+      <div className="col-span-2 rounded-lg border-l-4 border-amber-500 bg-amber-50 px-4 py-3">
+        <p className="mb-1 text-xs font-black uppercase tracking-[0.14em] text-emerald-950">
+          Mô tả công việc
+        </p>
+        <p className="whitespace-pre-wrap break-words text-[22px] font-bold leading-[1.5] text-slate-950">
+          {task.description || "—"}
+        </p>
+      </div>
+
+      <div className="col-span-2 flex flex-wrap items-center gap-x-7 gap-y-2 border-t border-slate-200 pt-2.5 text-base text-slate-950">
+        <span className="flex items-center gap-2">
+          <CalendarDays size={18} className="shrink-0 text-emerald-800" />
+          <span className="font-black uppercase tracking-wide text-emerald-950">Hạn:</span>
+          <span className="font-black text-red-700">{formatDateDisplay(task.due) || "—"}</span>
+        </span>
+        {task.support ? (
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="font-black uppercase tracking-wide text-emerald-950">Hỗ trợ:</span>
+            <span className="break-words font-black text-slate-950">{task.support}</span>
+          </span>
+        ) : null}
+      </div>
+
+      {task.note ? (
+        <div className="col-span-2 flex items-start gap-2 rounded-lg bg-emerald-50 px-3 py-2.5 text-base font-semibold text-slate-950">
+          <StickyNote size={18} className="mt-0.5 shrink-0 text-emerald-800" />
+          <p className="whitespace-pre-wrap break-words">{task.note}</p>
+        </div>
+      ) : null}
     </div>
   );
 }
 
 /* ============================================================
- * Export card — bản render off-screen dùng để chụp ảnh PNG
+ * Export card — rộng 1080px, chiều cao tự khớp nội dung để ảnh
+ * không còn viền nền hoặc bị ép/co vào khung 9:16.
  * ============================================================ */
 
 const EXPORT_IMAGE_WIDTH = 1080;
-const EXPORT_IMAGE_HEIGHT = 1920; // Tỉ lệ 9:16 chuẩn story/Zalo — KHÔNG đổi,
-// khung ảnh xuất ra luôn giữ đúng tỉ lệ này dù nội dung dài hay ngắn.
-const EXPORT_IMAGE_PADDING = 24;
-const EXPORT_CONTENT_WIDTH = EXPORT_IMAGE_WIDTH - EXPORT_IMAGE_PADDING * 2;
-// Giới hạn mức phóng to tối đa để tránh chữ bị quá khổ khi nội dung ngắn,
-// và mức thu nhỏ tối thiểu để chữ KHÔNG bị bé đến mức khó đọc khi nội
-// dung dài (đây là phần quan trọng nhất để chữ luôn to, dễ nhìn trên
-// điện thoại — nếu nội dung quá dài để vừa khung ở mức thu nhỏ tối
-// thiểu, ảnh sẽ tràn nhẹ ra ngoài khung thay vì ép chữ nhỏ xíu).
-const EXPORT_MAX_SCALE = 1.6;
-const EXPORT_MIN_SCALE = 0.72;
 
 const ReportExportCard = forwardRef<
   HTMLDivElement,
-  { form: ReportForm; contentRef: { current: HTMLDivElement | null } }
->(function ReportExportCard({ form, contentRef }, ref) {
+  { form: ReportForm }
+>(function ReportExportCard({ form }, ref) {
   const today = {
     weekday: weekdayLabel(form.reportDate),
     dateStr: formatDateDisplay(form.reportDate),
@@ -529,13 +580,12 @@ const ReportExportCard = forwardRef<
   return (
     <div
       ref={ref}
-      style={{ width: EXPORT_IMAGE_WIDTH, height: EXPORT_IMAGE_HEIGHT }}
-      className="relative overflow-hidden bg-slate-100"
+      style={{ width: EXPORT_IMAGE_WIDTH }}
+      className="overflow-hidden bg-white"
     >
       <div
-        ref={contentRef}
-        style={{ width: EXPORT_CONTENT_WIDTH }}
-        className="absolute overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200"
+        style={{ width: EXPORT_IMAGE_WIDTH }}
+        className="overflow-hidden bg-white"
       >
         {/* Header */}
         <header className="relative overflow-hidden bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-800 px-9 pb-9 pt-7">
@@ -576,25 +626,26 @@ const ReportExportCard = forwardRef<
         </header>
 
         {/* Body */}
-        <div className="space-y-6 px-8 py-8">
-          <div className="flex items-start gap-4 rounded-xl bg-emerald-50/70 p-5 ring-1 ring-emerald-100">
-            <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-white">
-              <UserRound size={26} />
+        <div className="space-y-4 px-8 py-6">
+          <div className="flex items-start gap-3 rounded-xl bg-emerald-50/70 p-4 ring-1 ring-emerald-100">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-white">
+              <UserRound size={22} />
             </span>
             <div>
               <p className="text-xl font-black text-emerald-950">
                 Kính gửi {form.recipient || "..."},
               </p>
-              <p className="mt-1 text-base font-semibold text-slate-500">{form.intro}</p>
+              <p className="mt-1 text-base font-semibold text-slate-950">{form.intro}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-5 gap-2.5">
-            <ExportStatCard label="Tổng đầu việc" value={stats.total} Icon={ClipboardList} tone="green" />
-            <ExportStatCard label="Đã hoàn thành" value={stats.done} Icon={CheckCircle2} tone="green" />
-            <ExportStatCard label="Đang thực hiện" value={stats.inprogress} Icon={Hourglass} tone="gold" />
-            <ExportStatCard label="Chưa thực hiện" value={stats.pending} Icon={AlertCircle} tone="red" />
-            <ExportStatCard label="Điều chỉnh deadline" value={stats.adjusted} Icon={CalendarClock} tone="green" />
+          {/* Số liệu phụ nằm trên một hàng gọn để dành chiều cao cho danh sách đầu việc. */}
+          <div className="grid grid-cols-5 divide-x divide-slate-200 overflow-hidden rounded-xl border border-slate-200">
+            <ExportStatCardCompact label="Tổng đầu việc" value={stats.total} Icon={ClipboardList} tone="green" />
+            <ExportStatCardCompact label="Đã hoàn thành" value={stats.done} Icon={CheckCircle2} tone="green" />
+            <ExportStatCardCompact label="Đang thực hiện" value={stats.inprogress} Icon={Hourglass} tone="gold" />
+            <ExportStatCardCompact label="Chưa thực hiện" value={stats.pending} Icon={AlertCircle} tone="red" />
+            <ExportStatCardCompact label="Điều chỉnh deadline" value={stats.adjusted} Icon={CalendarClock} tone="green" />
           </div>
 
           {(["done", "inprogress", "pending"] as TaskStatus[]).map((status) => {
@@ -602,14 +653,14 @@ const ReportExportCard = forwardRef<
             const list = grouped[status];
             if (!list.length) return null;
             return (
-              <div key={status} className="space-y-3">
+              <div key={status} className="space-y-2">
                 <ExportSectionRibbon
                   number={meta.number}
                   title={meta.title}
                   accent={meta.accent}
                   HeaderIcon={meta.HeaderIcon}
                 />
-                <div className="rounded-xl bg-white px-5 ring-1 ring-slate-200">
+                <div className="space-y-2">
                   {list.map((task) => (
                     <ExportTaskRow key={task.id} task={task} accent={meta.accent} />
                   ))}
@@ -618,7 +669,7 @@ const ReportExportCard = forwardRef<
             );
           })}
 
-          <div className="relative overflow-hidden rounded-xl border border-amber-300/70 bg-amber-50/50 p-5">
+          <div className="relative overflow-hidden rounded-xl border border-amber-300/70 bg-amber-50/50 p-4">
             <TrendingUp size={84} className="pointer-events-none absolute -right-2 -top-2 text-amber-200" />
             <div className="relative mb-3 flex items-center gap-2.5">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-950 text-white">
@@ -629,20 +680,20 @@ const ReportExportCard = forwardRef<
             {visiblePlan.length ? (
               <ul className="relative space-y-2 pl-1">
                 {visiblePlan.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-lg font-semibold text-slate-600">
+                  <li key={i} className="flex items-start gap-2.5 text-lg font-semibold text-slate-950">
                     <span className="mt-2.5 size-2 shrink-0 rounded-full bg-amber-500" />
                     {item}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="relative text-lg font-semibold italic text-slate-400">Chưa có định hướng</p>
+              <p className="relative text-lg font-semibold text-slate-950">Chưa có định hướng</p>
             )}
           </div>
         </div>
 
         {/* Footer */}
-        <footer className="flex items-center gap-3 bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-800 px-8 py-5">
+        <footer className="flex items-center gap-3 bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-800 px-8 py-4">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-amber-400">
             <PenLine size={18} />
           </span>
@@ -730,7 +781,6 @@ export default function BaoCaoCuoiNgayFormPage() {
   }
 
   const exportCardRef = useRef<HTMLDivElement>(null);
-  const exportContentRef = useRef<HTMLDivElement>(null);
 
   function update<K extends keyof ReportForm>(key: K, value: ReportForm[K]) {
     // flushSync ép React commit ngay, đảm bảo card xuất ảnh (render off-screen)
@@ -796,8 +846,7 @@ export default function BaoCaoCuoiNgayFormPage() {
   /* ---- Xuất ảnh PNG (tương thích di động: Web Share API + fallback iOS) ---- */
   async function handleExportImage() {
     const exportFrame = exportCardRef.current;
-    const exportContent = exportContentRef.current;
-    if (!exportFrame || !exportContent) return;
+    if (!exportFrame) return;
 
     setIsExporting(true);
     setSaveError("");
@@ -811,61 +860,22 @@ export default function BaoCaoCuoiNgayFormPage() {
         await document.fonts.ready;
       }
 
-      // Reset transform/scale trước khi đo, để lấy đúng chiều cao tự nhiên
-      // của nội dung (chưa co giãn).
-      exportContent.style.transform = "none";
-      exportContent.style.left = "0px";
-      exportContent.style.top = "0px";
-
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-      const naturalContentHeight = exportContent.scrollHeight;
-      const availableWidth = EXPORT_IMAGE_WIDTH - EXPORT_IMAGE_PADDING * 2;
-      const availableHeight = EXPORT_IMAGE_HEIGHT - EXPORT_IMAGE_PADDING * 2;
-
-      // Co giãn nội dung để lấp đầy khung ảnh cố định tỉ lệ 9:16 mà không
-      // làm méo tỉ lệ chữ/khoảng cách — chỉ scale đều theo chiều cao,
-      // giới hạn trong khoảng [EXPORT_MIN_SCALE, EXPORT_MAX_SCALE]. Nhờ
-      // EXPORT_MIN_SCALE được nâng lên, chữ sẽ không bao giờ bị ép nhỏ
-      // đến mức khó đọc — nếu nội dung quá dài, ảnh sẽ hơi tràn khỏi
-      // khung 1920px thay vì thu nhỏ chữ quá mức.
-      const rawScale = availableHeight / naturalContentHeight;
-      const scale = Math.min(EXPORT_MAX_SCALE, Math.max(EXPORT_MIN_SCALE, rawScale));
-
-      const scaledWidth = availableWidth * scale;
-      const scaledHeight = naturalContentHeight * scale;
-      const left = Math.max(0, (EXPORT_IMAGE_WIDTH - scaledWidth) / 2);
-      const top = Math.max(0, (EXPORT_IMAGE_HEIGHT - scaledHeight) / 2);
-
-      // Nếu nội dung (sau khi scale ở mức tối thiểu cho phép) vẫn cao hơn
-      // khung ảnh cố định, ta giãn khung ảnh ra theo chiều cao thực tế
-      // thay vì cắt mất nội dung — vẫn giữ đúng chiều rộng 1080px, chỉ
-      // chiều cao vượt 1920 khi thật sự cần (trường hợp danh sách rất dài).
-      const finalCanvasHeight = Math.max(EXPORT_IMAGE_HEIGHT, top * 2 + scaledHeight + EXPORT_IMAGE_PADDING);
-      exportFrame.style.height = `${finalCanvasHeight}px`;
-
-      exportContent.style.left = `${left}px`;
-      exportContent.style.top = `${top}px`;
-      exportContent.style.transform = `scale(${scale})`;
-      exportContent.style.transformOrigin = "top left";
-
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
+      const exportHeight = Math.ceil(
+        Math.max(exportFrame.scrollHeight, exportFrame.getBoundingClientRect().height),
+      );
 
-      // Dùng toBlob thay vì toPng: ảnh 1080x1920 x2 pixel ratio dưới dạng
-      // base64 dataURL khá nặng, dễ khiến trình duyệt di động (đặc biệt
-      // Safari) treo hoặc rớt link tải. Blob nhẹ hơn và ổn định hơn.
+      // Khung đã rộng 1080px nên pixelRatio=1 đủ nét cho Zalo và tránh
+      // tốn bộ nhớ quá mức khi báo cáo cuối ngày có nhiều công việc.
       const blob = await toBlob(exportFrame, {
         width: EXPORT_IMAGE_WIDTH,
-        height: finalCanvasHeight,
-        pixelRatio: 2,
+        height: exportHeight,
+        pixelRatio: 1,
         cacheBust: true,
-        backgroundColor: "#f1f5f9",
+        backgroundColor: "#ffffff",
       });
-
-      // Khôi phục lại chiều cao khung cố định 9:16 cho lần render tiếp theo.
-      exportFrame.style.height = `${EXPORT_IMAGE_HEIGHT}px`;
 
       if (!blob) {
         throw new Error("Không thể tạo ảnh.");
@@ -939,7 +949,7 @@ export default function BaoCaoCuoiNgayFormPage() {
             </p>
             {morningOwners.length ? (
               <>
-                <p className="mb-3 text-xs font-semibold text-slate-500">
+                <p className="mb-3 text-sm font-semibold text-slate-950">
                   Chọn đúng tên bạn để tự động lấy công việc từ báo cáo sáng nay.
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -956,7 +966,7 @@ export default function BaoCaoCuoiNgayFormPage() {
                   <button
                     type="button"
                     onClick={handleSkipOwnerPicker}
-                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-black text-slate-500 transition hover:bg-slate-50"
+                    className="min-h-11 cursor-pointer rounded-lg border border-slate-300 px-4 py-2 text-sm font-black text-slate-950 transition duration-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
                   >
                     Không thấy tên tôi
                   </button>
@@ -964,13 +974,13 @@ export default function BaoCaoCuoiNgayFormPage() {
               </>
             ) : (
               <>
-                <p className="mb-3 text-xs font-semibold text-slate-500">
+                <p className="mb-3 text-sm font-semibold text-slate-950">
                   Chưa có ai gửi báo cáo sáng hôm nay. Bạn có thể điền tay từ đầu.
                 </p>
                 <button
                   type="button"
                   onClick={handleSkipOwnerPicker}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-black text-slate-600 transition hover:bg-slate-50"
+                  className="min-h-11 cursor-pointer rounded-lg border border-slate-300 px-4 py-2 text-sm font-black text-slate-950 transition duration-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
                 >
                   Điền tay từ đầu
                 </button>
@@ -992,7 +1002,7 @@ export default function BaoCaoCuoiNgayFormPage() {
         ) : null}
 
         {selectedOwner && selectedOwner !== "__manual__" ? (
-          <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-600 ring-1 ring-slate-200">
+          <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-950 ring-1 ring-slate-200">
             <span>
               Đang điền theo báo cáo sáng của:{" "}
               <span className="font-black text-emerald-800">{selectedOwner}</span>
@@ -1067,56 +1077,71 @@ export default function BaoCaoCuoiNgayFormPage() {
 
         {/* ===== Danh sách công việc (gộp 1 danh sách, tự nhóm theo trạng thái khi xuất ảnh) ===== */}
         <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-black uppercase tracking-wide text-emerald-950">
               Danh sách công việc trong ngày
             </p>
-            <p className="text-xs font-semibold text-slate-400">
+            <p className="text-sm font-semibold text-slate-950">
               Đổi "Trạng thái" để công việc tự chuyển đúng mục khi xuất ảnh
             </p>
           </div>
 
           <div className="space-y-3">
-            {form.tasks.map((task) => (
-              <div key={task.id} className="rounded-lg border border-slate-200 p-3">
-               <div className="grid grid-cols-1 gap-2 sm:grid-cols-[100px_140px_1fr_70px] sm:items-start">
-  <div>
-    <FieldLabel>Mã đầu việc</FieldLabel>
-    <TextField
-      value={task.code}
-      onChange={(v) => updateTask(task.id, { code: v })}
-      placeholder="1.1"
-    />
-  </div>
-  <div>
-    <FieldLabel>Loại</FieldLabel>
-    <IconSelect value={task.icon} onChange={(v) => updateTask(task.id, { icon: v })} />
-  </div>
-  <div>
-    <FieldLabel>Dự án</FieldLabel>
-    <TextField
-      value={task.project}
-      onChange={(v) => updateTask(task.id, { project: v })}
-      placeholder="Hạt Dẻ Ông Lý"
-    />
-  </div>
-  <div className="flex items-end justify-center">
-    <RemoveRowButton onClick={() => removeTask(task.id)} label="Xoá công việc" />
-  </div>
-</div>
-
-                <div className="mt-2">
-                  <FieldLabel>Mô tả</FieldLabel>
-                  <TextField
-                    value={task.description}
-                    onChange={(v) => updateTask(task.id, { description: v })}
-                    placeholder="Nghiên cứu kích thước, thiết kế mẫu layout bao bì..."
-                  />
+            {form.tasks.map((task, index) => (
+              <div
+                key={task.id}
+                className="rounded-xl border border-slate-300 bg-slate-50/70 p-4 shadow-sm"
+              >
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-base font-black text-white">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-base font-black text-slate-950">Công việc {index + 1}</p>
+                      <p className="text-sm font-semibold text-slate-950">
+                        Tên dự án và mô tả sẽ được ưu tiên trên ảnh.
+                      </p>
+                    </div>
+                  </div>
+                  <RemoveRowButton onClick={() => removeTask(task.id)} label="Xoá công việc" />
                 </div>
 
-                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <FieldLabel>Dự án / Công việc</FieldLabel>
+                    <TextField
+                      value={task.project}
+                      onChange={(v) => updateTask(task.id, { project: v })}
+                      placeholder="Hạt Dẻ Ông Lý"
+                    />
+                  </div>
+
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 sm:col-span-2">
+                    <FieldLabel>Mô tả công việc</FieldLabel>
+                    <TextAreaField
+                      value={task.description}
+                      onChange={(v) => updateTask(task.id, { description: v })}
+                      placeholder="Mô tả kết quả đã làm, tiến độ và nội dung cần theo dõi."
+                      rows={4}
+                      className="min-h-[128px] border-amber-400 bg-white"
+                    />
+                  </div>
+
                   <div>
-                    <FieldLabel>Hạn</FieldLabel>
+                    <FieldLabel>Mã đầu việc</FieldLabel>
+                    <TextField
+                      value={task.code}
+                      onChange={(v) => updateTask(task.id, { code: v })}
+                      placeholder="1.1"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Loại</FieldLabel>
+                    <IconSelect value={task.icon} onChange={(v) => updateTask(task.id, { icon: v })} />
+                  </div>
+                  <div>
+                    <FieldLabel>Hạn hoàn thành</FieldLabel>
                     <DateField value={task.due} onChange={(v) => updateTask(task.id, { due: v })} />
                   </div>
                   <div>
@@ -1127,27 +1152,27 @@ export default function BaoCaoCuoiNgayFormPage() {
                       placeholder="Văn Phú"
                     />
                   </div>
-                  <div>
+                  <div className="sm:col-span-2">
                     <FieldLabel>Trạng thái</FieldLabel>
                     <StatusSelect value={task.status} onChange={(v) => updateTask(task.id, { status: v })} />
                   </div>
+                  <div className="sm:col-span-2">
+                    <FieldLabel>Ghi chú (tuỳ chọn)</FieldLabel>
+                    <TextAreaField
+                      value={task.note}
+                      onChange={(v) => updateTask(task.id, { note: v })}
+                      placeholder="Dời deadline sang ngày 16/07/2026"
+                      rows={2}
+                    />
+                  </div>
                 </div>
 
-                <div className="mt-2">
-                  <FieldLabel>Ghi chú (tuỳ chọn)</FieldLabel>
-                  <TextField
-                    value={task.note}
-                    onChange={(v) => updateTask(task.id, { note: v })}
-                    placeholder="Dời deadline sang ngày 16/07/2026"
-                  />
-                </div>
-
-                <label className="mt-2 flex items-center gap-2 text-xs font-bold text-slate-500">
+                <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-3 rounded-lg bg-white px-3 text-sm font-bold text-slate-950 ring-1 ring-slate-200">
                   <input
                     type="checkbox"
                     checked={task.deadlineAdjusted}
                     onChange={(e) => updateTask(task.id, { deadlineAdjusted: e.target.checked })}
-                    className="size-3.5 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
+                    className="size-5 rounded border-slate-400 text-emerald-700 focus:ring-emerald-600"
                   />
                   Đầu việc này đã điều chỉnh deadline
                 </label>
@@ -1213,12 +1238,12 @@ export default function BaoCaoCuoiNgayFormPage() {
         ) : null}
 
         {/* ===== Nút hành động ===== */}
-        <div className="flex justify-end gap-3 pb-6">
+        <div className="grid grid-cols-2 gap-2 px-1 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-1 sm:flex sm:justify-end sm:gap-3 sm:px-0 sm:pb-6 sm:pt-0">
           <button
             type="button"
             onClick={handleExportImage}
             disabled={isExporting}
-            className="flex h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-400 bg-white px-3 text-sm font-black text-slate-950 transition duration-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 active:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
           >
             {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
             {isExporting ? "Đang xuất ảnh..." : "Xuất ảnh (Zalo)"}
@@ -1227,7 +1252,7 @@ export default function BaoCaoCuoiNgayFormPage() {
             type="button"
             onClick={handleSubmit}
             disabled={isSaving}
-            className="flex h-11 items-center gap-2 rounded-xl bg-gradient-to-br from-emerald-800 to-emerald-700 px-5 text-sm font-black text-white shadow-md shadow-emerald-800/25 transition hover:from-emerald-900 hover:to-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-emerald-800 to-emerald-700 px-3 text-sm font-black text-white shadow-md shadow-emerald-800/25 transition duration-200 hover:from-emerald-900 hover:to-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-950 focus-visible:ring-offset-2 active:from-emerald-950 active:to-emerald-900 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
           >
             {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {isSaving ? "Đang lưu..." : "Lưu báo cáo"}
@@ -1236,7 +1261,7 @@ export default function BaoCaoCuoiNgayFormPage() {
 
         {/* ===== Card ẩn để xuất ảnh ===== */}
         <div className="pointer-events-none fixed -left-[9999px] top-0">
-          <ReportExportCard ref={exportCardRef} contentRef={exportContentRef} form={form} />
+          <ReportExportCard ref={exportCardRef} form={form} />
         </div>
       </div>
     </main>

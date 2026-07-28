@@ -343,12 +343,12 @@ function StatCard({
 }) {
   const t = STAT_TONES[tone];
   return (
-    <div className={`flex flex-col items-center gap-1.5 rounded-lg bg-white px-2 py-3 ring-1 ${t.ring}`}>
-      <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${t.icon}`}>
-        <Icon size={18} strokeWidth={2.4} />
+    <div className={`flex min-h-[78px] flex-col items-center justify-center gap-0.5 bg-white px-2 py-2 ${t.ring}`}>
+      <span className={`flex size-7 shrink-0 items-center justify-center rounded-full ${t.icon}`}>
+        <Icon size={15} strokeWidth={2.4} />
       </span>
-      <span className="text-2xl font-black leading-none text-slate-900 tabular-nums">{value}</span>
-      <span className="text-center text-[11px] font-bold leading-tight text-slate-900">
+      <span className="text-xl font-black leading-none text-slate-950 tabular-nums">{value}</span>
+      <span className="text-center text-xs font-bold leading-tight text-slate-950">
         {label}
       </span>
     </div>
@@ -392,14 +392,14 @@ function ExportStatCardCompact({
 function ExportRibbon({ number, title }: { number: number; title: string }) {
   return (
     <div className="flex items-stretch overflow-hidden rounded-lg">
-      <div className="flex w-14 shrink-0 items-center justify-center bg-amber-500">
-        <span className="text-3xl font-black text-emerald-950">{number}</span>
+      <div className="flex w-12 shrink-0 items-center justify-center bg-amber-500">
+        <span className="text-2xl font-black text-emerald-950">{number}</span>
       </div>
       <div
-        className="flex flex-1 items-center bg-gradient-to-r from-emerald-950 to-emerald-800 px-5 py-3.5"
+        className="flex flex-1 items-center bg-gradient-to-r from-emerald-950 to-emerald-800 px-4 py-2.5"
         style={{ clipPath: "polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%)" }}
       >
-        <span className="text-xl font-black uppercase tracking-wider text-white">{title}</span>
+        <span className="text-lg font-black uppercase tracking-wider text-white">{title}</span>
       </div>
     </div>
   );
@@ -409,7 +409,7 @@ function ExportBadge({ status }: { status: TaskStatus }) {
   const meta = STATUS_META[status];
   return (
     <span
-      className={`inline-flex w-full items-center justify-center rounded-lg px-3 py-3 text-center text-lg font-black leading-tight ${meta.badge}`}
+      className={`inline-flex w-full items-center justify-center rounded-lg px-3 py-2.5 text-center text-base font-black leading-tight ${meta.badge}`}
     >
       {meta.label}
     </span>
@@ -420,39 +420,39 @@ function ExportBadge({ status }: { status: TaskStatus }) {
 // để mô tả không còn bị các cột khác ép thành chữ xếp dọc.
 function ExportPriorityCard({ index, task }: { index: number; task: PriorityTask }) {
   return (
-    <div className="grid grid-cols-[64px_minmax(0,1fr)_190px] items-start gap-x-5 gap-y-4 rounded-2xl border border-emerald-950/15 bg-white p-6 shadow-sm">
-      <span className="flex size-14 items-center justify-center rounded-full bg-emerald-950 text-xl font-black text-white">
+    <div className="grid grid-cols-[52px_minmax(0,1fr)_170px] items-start gap-x-4 gap-y-3 rounded-xl border border-emerald-950/15 bg-white p-4 shadow-sm">
+      <span className="flex size-12 items-center justify-center rounded-full bg-emerald-950 text-lg font-black text-white">
         {index}
       </span>
       <div className="min-w-0 pt-0.5">
-        <p className="break-words text-[26px] font-black leading-tight text-emerald-950">
+        <p className="break-words text-2xl font-black leading-tight text-emerald-950">
           {task.project || "—"}
         </p>
         <p className="mt-1 break-words text-lg font-bold text-slate-950">
           {task.category || "—"}
         </p>
       </div>
-      <div className="w-[190px]">
+      <div className="w-[170px]">
         <ExportBadge status={task.status} />
       </div>
 
-      <div className="col-start-2 col-span-2 rounded-xl border-l-4 border-amber-500 bg-amber-50 px-5 py-4">
-        <p className="mb-1.5 text-sm font-black uppercase tracking-[0.14em] text-emerald-950">
+      <div className="col-span-3 rounded-lg border-l-4 border-amber-500 bg-amber-50 px-4 py-3">
+        <p className="mb-1 text-xs font-black uppercase tracking-[0.14em] text-emerald-950">
           Mô tả công việc
         </p>
-        <p className="whitespace-pre-wrap break-words text-[22px] font-bold leading-relaxed text-slate-950">
+        <p className="whitespace-pre-wrap break-words text-[22px] font-bold leading-[1.5] text-slate-950">
           {task.description || "—"}
         </p>
       </div>
 
-      <div className="col-start-2 col-span-2 grid grid-cols-2 gap-3 text-lg font-semibold text-slate-950">
-        <span className="flex min-w-0 items-center gap-2 rounded-lg bg-slate-50 px-4 py-3">
-          <CalendarDays size={20} className="shrink-0 text-emerald-800" />
+      <div className="col-span-3 grid grid-cols-2 gap-2 text-base font-semibold text-slate-950">
+        <span className="flex min-w-0 items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5">
+          <CalendarDays size={18} className="shrink-0 text-emerald-800" />
           <span>Hạn:</span>
           <span className="font-black text-red-700">{formatDateDisplay(task.due) || "—"}</span>
         </span>
-        <span className="flex min-w-0 items-center gap-2 rounded-lg bg-slate-50 px-4 py-3">
-          <UserRound size={20} className="shrink-0 text-emerald-800" />
+        <span className="flex min-w-0 items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5">
+          <UserRound size={18} className="shrink-0 text-emerald-800" />
           <span>Phụ trách:</span>
           <span className="break-words font-black text-slate-950">{task.owner || "—"}</span>
         </span>
@@ -469,35 +469,35 @@ function ExportFollowupCard({
   task: FollowupTask;
 }) {
   return (
-    <div className="grid grid-cols-[64px_minmax(0,1fr)_190px] items-start gap-x-5 gap-y-4 rounded-2xl border border-emerald-950/15 bg-white p-6 shadow-sm">
-      <span className="flex size-14 items-center justify-center rounded-full bg-emerald-800 text-xl font-black text-white">
+    <div className="grid grid-cols-[52px_minmax(0,1fr)_170px] items-start gap-x-4 gap-y-3 rounded-xl border border-emerald-950/15 bg-white p-4 shadow-sm">
+      <span className="flex size-12 items-center justify-center rounded-full bg-emerald-800 text-lg font-black text-white">
         {index}
       </span>
       <div className="min-w-0">
-        <p className="mb-1.5 text-sm font-black uppercase tracking-[0.14em] text-emerald-950">
+        <p className="mb-1 text-xs font-black uppercase tracking-[0.14em] text-emerald-950">
           Nội dung công việc
         </p>
-        <p className="whitespace-pre-wrap break-words text-[22px] font-bold leading-relaxed text-slate-950">
+        <p className="whitespace-pre-wrap break-words text-[22px] font-bold leading-[1.5] text-slate-950">
           {task.content || "—"}
         </p>
       </div>
-      <div className="w-[190px]">
+      <div className="w-[170px]">
         <ExportBadge status={task.status} />
       </div>
 
-      <div className="col-start-2 col-span-2 grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.8fr)] gap-3 text-lg text-slate-950">
-        <div className="min-w-0 rounded-lg bg-emerald-50 px-4 py-3">
-          <p className="text-sm font-black uppercase tracking-wide text-emerald-950">
+      <div className="col-start-2 col-span-2 grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.8fr)] gap-2 text-base text-slate-950">
+        <div className="min-w-0 rounded-lg bg-emerald-50 px-3 py-2.5">
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-950">
             Dự án / Hạng mục
           </p>
           <p className="mt-1 break-words font-black text-slate-950">{task.project || "—"}</p>
         </div>
-        <div className="rounded-lg bg-slate-50 px-4 py-3">
-          <p className="text-sm font-black uppercase tracking-wide text-emerald-950">Hạn hoàn thành</p>
+        <div className="rounded-lg bg-slate-50 px-3 py-2.5">
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-950">Hạn hoàn thành</p>
           <p className="mt-1 font-black text-red-700">{formatDateDisplay(task.due) || "—"}</p>
         </div>
-        <div className="rounded-lg bg-slate-50 px-4 py-3">
-          <p className="text-sm font-black uppercase tracking-wide text-emerald-950">Hỗ trợ</p>
+        <div className="rounded-lg bg-slate-50 px-3 py-2.5">
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-950">Hỗ trợ</p>
           <p className="mt-1 break-words font-black text-slate-950">{task.support || "—"}</p>
         </div>
       </div>
@@ -528,7 +528,7 @@ const ReportExportCard = forwardRef<
 
   const stats = {
     total: allTasks.length,
-    dueToday: allTasks.length,
+    dueToday: allTasks.filter((task) => task.due === form.reportDate).length,
     done: count("done"),
     inprogress: count("inprogress"),
     pending: count("pending"),
@@ -599,10 +599,10 @@ const ReportExportCard = forwardRef<
         </header>
 
         {/* Body */}
-        <div className="space-y-6 px-8 py-8">
-          <div className="flex items-start gap-4 rounded-xl bg-slate-50 p-5 ring-1 ring-slate-200/80">
-            <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-white">
-              <UserRound size={26} />
+        <div className="space-y-4 px-8 py-6">
+          <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200/80">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-white">
+              <UserRound size={22} />
             </span>
             <div>
               <p className="text-2xl font-black text-emerald-950">
@@ -614,8 +614,8 @@ const ReportExportCard = forwardRef<
             </div>
           </div>
 
-          {/* 3 cột x 2 hàng để các số liệu vẫn đọc được khi ảnh hiển thị trên điện thoại. */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Số liệu phụ nằm trên một hàng gọn để dành chiều cao cho danh sách đầu việc. */}
+          <div className="grid grid-cols-6 divide-x divide-slate-200 overflow-hidden rounded-xl border border-slate-200">
             <ExportStatCardCompact label="Tổng đầu việc" value={stats.total} Icon={ClipboardList} tone="green" />
             <ExportStatCardCompact label="Hạn trong ngày" value={stats.dueToday} Icon={CalendarDays} tone="gold" />
             <ExportStatCardCompact label="Đã hoàn thành" value={stats.done} Icon={CheckCircle2} tone="green" />
@@ -633,9 +633,9 @@ const ReportExportCard = forwardRef<
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             <ExportRibbon number={2} title="Công việc theo dõi / bổ sung" />
-            <div className="space-y-3">
+            <div className="space-y-2">
               {visibleFollowups.length ? (
                 visibleFollowups.map((row, i) => (
                   <ExportFollowupCard key={row.id} index={i + 1} task={row} />
@@ -649,7 +649,7 @@ const ReportExportCard = forwardRef<
           </div>
 
           <div className="grid grid-cols-[1fr_auto] gap-3">
-            <div className="rounded-xl border border-amber-300/70 bg-amber-50/60 p-5">
+            <div className="rounded-xl border border-amber-300/70 bg-amber-50/60 p-4">
               <div className="mb-2.5 flex items-center gap-2">
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-950 text-white">
                   <ClipboardList size={18} />
@@ -670,9 +670,9 @@ const ReportExportCard = forwardRef<
               )}
             </div>
 
-            <div className="flex min-w-[200px] flex-col items-center justify-center gap-2 rounded-xl bg-slate-50 px-6 py-5 text-center ring-1 ring-slate-200/80">
-              <span className="flex size-14 items-center justify-center rounded-full bg-emerald-950 text-white">
-                <UserRound size={26} />
+            <div className="flex min-w-[190px] flex-col items-center justify-center gap-1.5 rounded-xl bg-slate-50 px-5 py-4 text-center ring-1 ring-slate-200/80">
+              <span className="flex size-12 items-center justify-center rounded-full bg-emerald-950 text-white">
+                <UserRound size={22} />
               </span>
               <p className="text-sm font-bold uppercase tracking-wide text-slate-950">Người phụ trách</p>
               <p className="text-xl font-black text-emerald-950">{form.owner || "—"}</p>
@@ -961,7 +961,7 @@ const response = await fetch("/api/work-reports", {
 
         {/* ===== Mục 1: Ưu tiên hôm nay ===== */}
         <FormSection number={1} title="Ưu tiên thực hiện hôm nay">
-          <div className="space-y-3">
+          <div className="space-y-2">
             {form.priorityTasks.map((task, index) => (
               <div
                 key={task.id}
@@ -1049,7 +1049,7 @@ const response = await fetch("/api/work-reports", {
 
         {/* ===== Mục 2: Theo dõi / bổ sung ===== */}
         <FormSection number={2} title="Công việc theo dõi / bổ sung">
-          <div className="space-y-3">
+            <div className="space-y-2">
             {form.followupTasks.map((task, index) => (
               <div
                 key={task.id}
