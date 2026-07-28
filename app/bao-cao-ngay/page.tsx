@@ -80,7 +80,7 @@ const STATUS_META: Record<
   TaskStatus,
   { label: string; badge: string; dot: string }
 > = {
-  pending: { label: "Chưa thực hiện", badge: "bg-rose-700 text-white", dot: "bg-rose-600" },
+  pending: { label: "Chưa thực hiện", badge: "bg-red-700 text-white", dot: "bg-red-600" },
   inprogress: { label: "Đang thực hiện", badge: "bg-amber-500 text-emerald-950", dot: "bg-amber-500" },
   done: { label: "Đã hoàn thành", badge: "bg-emerald-700 text-white", dot: "bg-emerald-600" },
 };
@@ -94,7 +94,7 @@ const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
 const STAT_TONES = {
   green: { ring: "ring-emerald-800/10", icon: "bg-emerald-800 text-white" },
   gold: { ring: "ring-amber-500/10", icon: "bg-amber-500 text-white" },
-  red: { ring: "ring-rose-700/10", icon: "bg-rose-700 text-white" },
+  red: { ring: "ring-red-700/10", icon: "bg-red-700 text-white" },
   gray: { ring: "ring-slate-400/10", icon: "bg-slate-400 text-white" },
 } as const;
 
@@ -201,7 +201,7 @@ function TextField({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base font-semibold text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-600 ${className}`}
+      className={`min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-semibold text-slate-950 outline-none placeholder:font-normal placeholder:text-slate-600 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15 ${className}`}
     />
   );
 }
@@ -211,11 +211,13 @@ function TextAreaField({
   onChange,
   placeholder,
   rows = 2,
+  className = "",
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   rows?: number;
+  className?: string;
 }) {
   return (
     <textarea
@@ -223,7 +225,7 @@ function TextAreaField({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       rows={rows}
-      className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-base font-semibold text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-600"
+      className={`w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-3 text-base font-semibold leading-relaxed text-slate-950 outline-none placeholder:font-normal placeholder:text-slate-600 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15 ${className}`}
     />
   );
 }
@@ -240,7 +242,7 @@ function DateField({
       type="date"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base font-semibold text-slate-900 outline-none focus:border-emerald-600 [color-scheme:light]"
+      className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-semibold text-slate-950 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15 [color-scheme:light]"
     />
   );
 }
@@ -256,7 +258,7 @@ function StatusSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as TaskStatus)}
-      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base font-bold text-slate-900 outline-none focus:border-emerald-600"
+      className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-bold text-slate-950 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
     >
       {STATUS_OPTIONS.map((opt) => (
         <option key={opt.value} value={opt.value}>
@@ -273,9 +275,9 @@ function RemoveRowButton({ onClick, label }: { onClick: () => void; label: strin
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-rose-200 text-rose-600 transition hover:bg-rose-50"
+      className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-red-300 bg-white text-red-700 transition duration-200 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 active:bg-red-100"
     >
-      <Trash2 size={15} />
+      <Trash2 size={18} />
     </button>
   );
 }
@@ -285,9 +287,9 @@ function AddRowButton({ onClick, label }: { onClick: () => void; label: string }
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 rounded-lg border border-dashed border-emerald-300 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-50"
+      className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-dashed border-emerald-500 bg-white px-4 py-2.5 text-sm font-black text-emerald-800 transition duration-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 active:bg-emerald-100"
     >
-      <Plus size={14} />
+      <Plus size={18} />
       {label}
     </button>
   );
@@ -414,63 +416,107 @@ function ExportBadge({ status }: { status: TaskStatus }) {
   );
 }
 
-// Đã phóng to cỡ chữ (project/description/hạn/phụ trách/badge) so với bản
-// gốc để dễ theo dõi hơn trong ảnh xuất ra.
+// Nội dung chính chiếm trọn chiều ngang, metadata được đẩy xuống hàng phụ
+// để mô tả không còn bị các cột khác ép thành chữ xếp dọc.
 function ExportPriorityCard({ index, task }: { index: number; task: PriorityTask }) {
-  // LƯU Ý: card này CHỈ dùng trong khung xuất ảnh có kích thước pixel cố
-  // định (1032px), không phải trang web responsive thật, nên KHÔNG được
-  // dùng prefix "sm:" — prefix đó dựa vào độ rộng cửa sổ trình duyệt thực
-  // tế (window width), không phải độ rộng của container. Nếu người dùng
-  // xuất ảnh trên điện thoại (window < 640px), mọi "sm:" sẽ bị bỏ qua và
-  // layout rơi về bố cục dọc mặc định, gây lệch/dồn nội dung như đã gặp.
-  // Toàn bộ layout dưới đây luôn là bố cục hàng ngang, không đổi theo màn hình.
   return (
-    <div className="flex flex-row items-center gap-6 rounded-xl bg-white p-6 border border-slate-200">
-      <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-xl font-black text-white">
+    <div className="grid grid-cols-[64px_minmax(0,1fr)_190px] items-start gap-x-5 gap-y-4 rounded-2xl border border-emerald-950/15 bg-white p-6 shadow-sm">
+      <span className="flex size-14 items-center justify-center rounded-full bg-emerald-950 text-xl font-black text-white">
         {index}
       </span>
-      <div className="min-w-0 shrink-0 basis-[260px]">
-        <p className="text-2xl font-black text-emerald-900 break-words">{task.project || "—"}</p>
-        <p className="text-lg font-semibold italic text-slate-400 break-words">{task.category || "—"}</p>
+      <div className="min-w-0 pt-0.5">
+        <p className="break-words text-[26px] font-black leading-tight text-emerald-950">
+          {task.project || "—"}
+        </p>
+        <p className="mt-1 break-words text-lg font-bold text-slate-950">
+          {task.category || "—"}
+        </p>
       </div>
-      <div className="min-w-0 flex-1 text-lg font-semibold leading-snug text-slate-600 break-words">
-        {task.description || "—"}
-      </div>
-      <div className="flex w-72 shrink-0 flex-col gap-2.5 text-lg font-semibold text-slate-600">
-        <span className="flex items-center gap-2">
-          <CalendarDays size={20} className="shrink-0 text-emerald-800" />
-          Hạn: <span className="font-black text-rose-600">{formatDateDisplay(task.due) || "—"}</span>
-        </span>
-        <span className="flex items-center gap-2">
-          <UserRound size={20} className="shrink-0 text-emerald-800" />
-          Phụ trách: <span className="break-words font-bold text-slate-800">{task.owner || "—"}</span>
-        </span>
-      </div>
-      <div className="w-36 shrink-0">
+      <div className="w-[190px]">
         <ExportBadge status={task.status} />
+      </div>
+
+      <div className="col-start-2 col-span-2 rounded-xl border-l-4 border-amber-500 bg-amber-50 px-5 py-4">
+        <p className="mb-1.5 text-sm font-black uppercase tracking-[0.14em] text-emerald-950">
+          Mô tả công việc
+        </p>
+        <p className="whitespace-pre-wrap break-words text-[22px] font-bold leading-relaxed text-slate-950">
+          {task.description || "—"}
+        </p>
+      </div>
+
+      <div className="col-start-2 col-span-2 grid grid-cols-2 gap-3 text-lg font-semibold text-slate-950">
+        <span className="flex min-w-0 items-center gap-2 rounded-lg bg-slate-50 px-4 py-3">
+          <CalendarDays size={20} className="shrink-0 text-emerald-800" />
+          <span>Hạn:</span>
+          <span className="font-black text-red-700">{formatDateDisplay(task.due) || "—"}</span>
+        </span>
+        <span className="flex min-w-0 items-center gap-2 rounded-lg bg-slate-50 px-4 py-3">
+          <UserRound size={20} className="shrink-0 text-emerald-800" />
+          <span>Phụ trách:</span>
+          <span className="break-words font-black text-slate-950">{task.owner || "—"}</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ExportFollowupCard({
+  index,
+  task,
+}: {
+  index: number;
+  task: FollowupTask;
+}) {
+  return (
+    <div className="grid grid-cols-[64px_minmax(0,1fr)_190px] items-start gap-x-5 gap-y-4 rounded-2xl border border-emerald-950/15 bg-white p-6 shadow-sm">
+      <span className="flex size-14 items-center justify-center rounded-full bg-emerald-800 text-xl font-black text-white">
+        {index}
+      </span>
+      <div className="min-w-0">
+        <p className="mb-1.5 text-sm font-black uppercase tracking-[0.14em] text-emerald-950">
+          Nội dung công việc
+        </p>
+        <p className="whitespace-pre-wrap break-words text-[22px] font-bold leading-relaxed text-slate-950">
+          {task.content || "—"}
+        </p>
+      </div>
+      <div className="w-[190px]">
+        <ExportBadge status={task.status} />
+      </div>
+
+      <div className="col-start-2 col-span-2 grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.8fr)] gap-3 text-lg text-slate-950">
+        <div className="min-w-0 rounded-lg bg-emerald-50 px-4 py-3">
+          <p className="text-sm font-black uppercase tracking-wide text-emerald-950">
+            Dự án / Hạng mục
+          </p>
+          <p className="mt-1 break-words font-black text-slate-950">{task.project || "—"}</p>
+        </div>
+        <div className="rounded-lg bg-slate-50 px-4 py-3">
+          <p className="text-sm font-black uppercase tracking-wide text-emerald-950">Hạn hoàn thành</p>
+          <p className="mt-1 font-black text-red-700">{formatDateDisplay(task.due) || "—"}</p>
+        </div>
+        <div className="rounded-lg bg-slate-50 px-4 py-3">
+          <p className="text-sm font-black uppercase tracking-wide text-emerald-950">Hỗ trợ</p>
+          <p className="mt-1 break-words font-black text-slate-950">{task.support || "—"}</p>
+        </div>
       </div>
     </div>
   );
 }
 
 /* ============================================================
- * Export card — bản render off-screen, dùng để chụp ảnh PNG
- * Khung ảnh cố định tỉ lệ 9:16 (chuẩn story/Zalo), nội dung sẽ
- * tự co giãn (scale) để lấp đầy khung mà không bị méo tỉ lệ.
+ * Export card — bản render off-screen, dùng để chụp ảnh PNG.
+ * Ảnh giữ chiều rộng 1080px và tự lấy đúng chiều cao nội dung,
+ * không thêm viền nền ngoài hoặc ép nội dung vào khung 9:16.
  * ============================================================ */
 
 const EXPORT_IMAGE_WIDTH = 1080;
-const EXPORT_IMAGE_HEIGHT = 1920; // Tỉ lệ 9:16
-const EXPORT_IMAGE_PADDING = 24;
-const EXPORT_CONTENT_WIDTH = EXPORT_IMAGE_WIDTH - EXPORT_IMAGE_PADDING * 2;
-// Giới hạn mức phóng to tối đa để tránh chữ bị quá khổ khi nội dung ngắn
-const EXPORT_MAX_SCALE = 1.5;
-const EXPORT_MIN_SCALE = 0.4;
 
 const ReportExportCard = forwardRef<
   HTMLDivElement,
-  { form: ReportForm; contentRef: { current: HTMLDivElement | null } }
->(function ReportExportCard({ form, contentRef }, ref) {
+  { form: ReportForm }
+>(function ReportExportCard({ form }, ref) {
   const today = {
     weekday: weekdayLabel(form.reportDate),
     dateStr: formatDateDisplay(form.reportDate),
@@ -496,15 +542,12 @@ const ReportExportCard = forwardRef<
   return (
     <div
       ref={ref}
-      style={{ width: EXPORT_IMAGE_WIDTH, height: EXPORT_IMAGE_HEIGHT }}
-      className="relative overflow-hidden bg-slate-100"
+      style={{ width: EXPORT_IMAGE_WIDTH }}
+      className="overflow-hidden bg-white"
     >
       <div
-        ref={contentRef}
-        style={{
-          width: EXPORT_CONTENT_WIDTH,
-        }}
-        className="absolute overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200"
+        style={{ width: EXPORT_IMAGE_WIDTH }}
+        className="overflow-hidden bg-white"
       >
         {/* Header */}
         <header className="relative overflow-hidden bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-800 px-9 py-9">
@@ -565,14 +608,14 @@ const ReportExportCard = forwardRef<
               <p className="text-2xl font-black text-emerald-950">
                 Kính gửi {form.recipient || "..."},
               </p>
-              <p className="mt-1 text-base font-semibold text-slate-500">
+              <p className="mt-1 text-base font-semibold text-slate-950">
                 {form.intro}
               </p>
             </div>
           </div>
 
-          {/* Số liệu — gộp gọn trong đúng 1 dòng (6 cột) ngay dưới phần Kính gửi */}
-          <div className="grid grid-cols-6 gap-2">
+          {/* 3 cột x 2 hàng để các số liệu vẫn đọc được khi ảnh hiển thị trên điện thoại. */}
+          <div className="grid grid-cols-3 gap-3">
             <ExportStatCardCompact label="Tổng đầu việc" value={stats.total} Icon={ClipboardList} tone="green" />
             <ExportStatCardCompact label="Hạn trong ngày" value={stats.dueToday} Icon={CalendarDays} tone="gold" />
             <ExportStatCardCompact label="Đã hoàn thành" value={stats.done} Icon={CheckCircle2} tone="green" />
@@ -592,47 +635,16 @@ const ReportExportCard = forwardRef<
 
           <div className="space-y-3">
             <ExportRibbon number={2} title="Công việc theo dõi / bổ sung" />
-            <div className="overflow-hidden rounded-xl ring-1 ring-slate-200">
-              <table className="w-full border-collapse text-left text-lg">
-                <thead className="bg-emerald-950 text-base font-black uppercase tracking-wide text-white">
-                  <tr>
-                    <th className="w-16 px-3 py-4 text-center">STT</th>
-                    <th className="px-3 py-4">Nội dung công việc</th>
-                    <th className="px-3 py-4">Dự án / Hạng mục</th>
-                    <th className="px-3 py-4">Hạn hoàn thành</th>
-                    <th className="w-24 px-3 py-4 text-center">Hỗ trợ</th>
-                    <th className="w-40 px-3 py-4">Trạng thái</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 bg-white">
-                  {visibleFollowups.length ? (
-                    visibleFollowups.map((row, i) => (
-                      <tr key={row.id}>
-                        <td className="px-3 py-4 text-center font-black text-slate-400">{i + 1}</td>
-                        <td className="whitespace-pre-wrap break-words px-3 py-4 font-semibold text-slate-700">
-                          {row.content || "—"}
-                        </td>
-                        <td className="px-3 py-4 font-bold text-emerald-900">{row.project || "—"}</td>
-                        <td className="px-3 py-4 font-black text-rose-600">
-                          {formatDateDisplay(row.due) || "—"}
-                        </td>
-                        <td className="px-3 py-4 text-center font-semibold text-slate-400">
-                          {row.support || "-"}
-                        </td>
-                        <td className="px-3 py-4">
-                          <ExportBadge status={row.status} />
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={6} className="px-3 py-5 text-center text-lg font-semibold italic text-slate-400">
-                        Chưa có công việc theo dõi / bổ sung
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              {visibleFollowups.length ? (
+                visibleFollowups.map((row, i) => (
+                  <ExportFollowupCard key={row.id} index={i + 1} task={row} />
+                ))
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-white px-5 py-6 text-center text-lg font-bold text-slate-950">
+                  Chưa có công việc theo dõi / bổ sung
+                </div>
+              )}
             </div>
           </div>
 
@@ -647,14 +659,14 @@ const ReportExportCard = forwardRef<
               {visibleNotes.length ? (
                 <ul className="space-y-2 pl-1">
                   {visibleNotes.map((note, i) => (
-                    <li key={i} className="flex items-start gap-2 text-base font-semibold text-slate-600">
+                    <li key={i} className="flex items-start gap-2 text-base font-semibold text-slate-950">
                       <span className="mt-2.5 size-1.5 shrink-0 rounded-full bg-amber-500" />
                       {note}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-base font-semibold italic text-slate-400">Chưa có lưu ý</p>
+                <p className="text-base font-semibold text-slate-950">Chưa có lưu ý</p>
               )}
             </div>
 
@@ -662,7 +674,7 @@ const ReportExportCard = forwardRef<
               <span className="flex size-14 items-center justify-center rounded-full bg-emerald-950 text-white">
                 <UserRound size={26} />
               </span>
-              <p className="text-sm font-bold uppercase tracking-wide text-slate-400">Người phụ trách</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-slate-950">Người phụ trách</p>
               <p className="text-xl font-black text-emerald-950">{form.owner || "—"}</p>
               <span className="mt-1 flex items-center gap-2">
                 <span className="h-px w-8 bg-amber-400/70" />
@@ -693,7 +705,6 @@ export default function BaoCaoDauNgayFormPage() {
   const [previewUrl, setPreviewUrl] = useState<string>("");
 
   const exportCardRef = useRef<HTMLDivElement>(null);
-  const exportContentRef = useRef<HTMLDivElement>(null);
 
   function update<K extends keyof ReportForm>(key: K, value: ReportForm[K]) {
     // flushSync ép React commit state ngay lập tức (thay vì gộp/hoãn batch),
@@ -781,11 +792,10 @@ export default function BaoCaoDauNgayFormPage() {
     };
   }, [form.priorityTasks, form.followupTasks]);
 
-  /* ---- Xuất ảnh PNG 9:16 và tải xuống — tương thích iOS & Android ---- */
+  /* ---- Xuất ảnh PNG khít nội dung — tương thích iOS & Android ---- */
   async function handleExportImage() {
     const exportFrame = exportCardRef.current;
-    const exportContent = exportContentRef.current;
-    if (!exportFrame || !exportContent) return;
+    if (!exportFrame) return;
 
     setIsExporting(true);
     setSaveError("");
@@ -799,47 +809,23 @@ export default function BaoCaoDauNgayFormPage() {
         await document.fonts.ready;
       }
 
-      // Reset lại transform/scale trước khi đo, để lấy đúng chiều cao
-      // tự nhiên của nội dung (chưa co giãn).
-      exportContent.style.transform = "none";
-      exportContent.style.left = "0px";
-      exportContent.style.top = "0px";
-
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-      const naturalContentHeight = exportContent.scrollHeight;
-      const availableWidth = EXPORT_IMAGE_WIDTH - EXPORT_IMAGE_PADDING * 2;
-      const availableHeight = EXPORT_IMAGE_HEIGHT - EXPORT_IMAGE_PADDING * 2;
-
-      // Co giãn nội dung để lấp đầy khung ảnh cố định tỉ lệ 9:16 mà
-      // không làm méo tỉ lệ chữ/khoảng cách — chỉ scale đều theo chiều cao,
-      // giới hạn trong khoảng [EXPORT_MIN_SCALE, EXPORT_MAX_SCALE].
-      const rawScale = availableHeight / naturalContentHeight;
-      const scale = Math.min(EXPORT_MAX_SCALE, Math.max(EXPORT_MIN_SCALE, rawScale));
-
-      const scaledWidth = EXPORT_CONTENT_WIDTH * scale;
-      const scaledHeight = naturalContentHeight * scale;
-      const left = Math.max(0, (EXPORT_IMAGE_WIDTH - scaledWidth) / 2);
-      const top = Math.max(0, (EXPORT_IMAGE_HEIGHT - scaledHeight) / 2);
-
-      exportContent.style.left = `${left}px`;
-      exportContent.style.top = `${top}px`;
-      exportContent.style.transform = `scale(${scale})`;
-      exportContent.style.transformOrigin = "top left";
-
+      // Chờ layout ổn định rồi lấy đúng chiều cao thực tế. Canvas dùng
+      // chính chiều cao này nên ảnh không còn khoảng nền thừa trên/dưới.
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
+      const exportHeight = Math.ceil(
+        Math.max(exportFrame.scrollHeight, exportFrame.getBoundingClientRect().height),
+      );
 
-      // Dùng toBlob thay vì toPng: ảnh 1080x1920 x2 pixel ratio dưới dạng
-      // base64 dataURL khá nặng, dễ khiến trình duyệt di động (đặc biệt
-      // Safari) treo hoặc rớt link tải. Blob nhẹ hơn và ổn định hơn.
+      // Khung đã có chiều rộng 1080px nên pixelRatio=1 đủ nét cho Zalo,
+      // đồng thời giảm đáng kể bộ nhớ khi báo cáo có nhiều công việc.
       const blob = await toBlob(exportFrame, {
         width: EXPORT_IMAGE_WIDTH,
-        height: EXPORT_IMAGE_HEIGHT,
-        pixelRatio: 2,
+        height: exportHeight,
+        pixelRatio: 1,
         cacheBust: true,
-        backgroundColor: "#f1f5f9",
+        backgroundColor: "#ffffff",
       });
 
       if (!blob) {
@@ -979,59 +965,74 @@ const response = await fetch("/api/work-reports", {
             {form.priorityTasks.map((task, index) => (
               <div
                 key={task.id}
-                className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-[28px_1fr_1fr_1fr_140px_140px_32px] sm:items-start"
+                className="rounded-xl border border-slate-300 bg-slate-50/70 p-4 shadow-sm"
               >
-                <span className="flex size-7 items-center justify-center rounded-full bg-emerald-950 text-xs font-black text-white sm:mt-1">
-                  {index + 1}
-                </span>
-                <div>
-                  <FieldLabel>Dự án</FieldLabel>
-                  <TextField
-                    value={task.project}
-                    onChange={(v) => updatePriorityTask(task.id, { project: v })}
-                    placeholder="Hạt Dẻ Ông Lý"
-                  />
-                </div>
-                <div>
-                  <FieldLabel>Hạng mục</FieldLabel>
-                  <TextField
-                    value={task.category}
-                    onChange={(v) => updatePriorityTask(task.id, { category: v })}
-                    placeholder="Website"
-                  />
-                </div>
-                <div>
-                  <FieldLabel>Mô tả</FieldLabel>
-                  <TextField
-                    value={task.description}
-                    onChange={(v) => updatePriorityTask(task.id, { description: v })}
-                    placeholder="Sửa web, kiểm thử."
-                  />
-                </div>
-                <div>
-                  <FieldLabel>Hạn</FieldLabel>
-                  <DateField
-                    value={task.due}
-                    onChange={(v) => updatePriorityTask(task.id, { due: v })}
-                  />
-                </div>
-                <div>
-                  <FieldLabel>Phụ trách</FieldLabel>
-                  <TextField
-                    value={task.owner}
-                    onChange={(v) => updatePriorityTask(task.id, { owner: v })}
-                    placeholder="Khả Doanh"
-                  />
-                </div>
-                <div className="flex items-end justify-center sm:pt-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-base font-black text-white">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-base font-black text-slate-950">
+                        Công việc ưu tiên {index + 1}
+                      </p>
+                      <p className="text-sm font-semibold text-slate-950">
+                        Nhập rõ dự án và mô tả công việc cần hoàn thành.
+                      </p>
+                    </div>
+                  </div>
                   <RemoveRowButton
                     onClick={() => removePriorityTask(task.id)}
                     label="Xoá công việc ưu tiên"
                   />
                 </div>
-                <div className="sm:col-span-7">
-                  <FieldLabel>Trạng thái</FieldLabel>
-                  <div className="max-w-[220px]">
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <FieldLabel>Dự án</FieldLabel>
+                    <TextField
+                      value={task.project}
+                      onChange={(v) => updatePriorityTask(task.id, { project: v })}
+                      placeholder="Hạt Dẻ Ông Lý"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Hạng mục</FieldLabel>
+                    <TextField
+                      value={task.category}
+                      onChange={(v) => updatePriorityTask(task.id, { category: v })}
+                      placeholder="Website"
+                    />
+                  </div>
+
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 sm:col-span-2">
+                    <FieldLabel>Mô tả công việc</FieldLabel>
+                    <TextAreaField
+                      value={task.description}
+                      onChange={(v) => updatePriorityTask(task.id, { description: v })}
+                      placeholder="Mô tả cụ thể việc cần làm, kết quả cần đạt và nội dung cần lưu ý."
+                      rows={3}
+                      className="min-h-[112px] border-amber-400 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <FieldLabel>Hạn hoàn thành</FieldLabel>
+                    <DateField
+                      value={task.due}
+                      onChange={(v) => updatePriorityTask(task.id, { due: v })}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Phụ trách</FieldLabel>
+                    <TextField
+                      value={task.owner}
+                      onChange={(v) => updatePriorityTask(task.id, { owner: v })}
+                      placeholder="Khả Doanh"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <FieldLabel>Trạng thái</FieldLabel>
                     <StatusSelect
                       value={task.status}
                       onChange={(v) => updatePriorityTask(task.id, { status: v })}
@@ -1047,59 +1048,74 @@ const response = await fetch("/api/work-reports", {
         </FormSection>
 
         {/* ===== Mục 2: Theo dõi / bổ sung ===== */}
-        {/* Thứ tự cột đã đổi: Dự án / Hạng mục lên trước, Nội dung công
-            việc theo sau. Chỉ đổi vị trí nhập liệu trên FORM — bảng trong
-            ảnh xuất ra (ReportExportCard) vẫn giữ nguyên thứ tự cột cũ. */}
         <FormSection number={2} title="Công việc theo dõi / bổ sung">
           <div className="space-y-3">
-            {form.followupTasks.map((task) => (
+            {form.followupTasks.map((task, index) => (
               <div
                 key={task.id}
-                className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-[1fr_1.4fr_140px_100px_160px_32px] sm:items-start"
+                className="rounded-xl border border-slate-300 bg-slate-50/70 p-4 shadow-sm"
               >
-                <div>
-                  <FieldLabel>Dự án / Hạng mục</FieldLabel>
-                  <TextField
-                    value={task.project}
-                    onChange={(v) => updateFollowupTask(task.id, { project: v })}
-                    placeholder="Hạt Dẻ Ông Lý"
-                  />
-                </div>
-                <div>
-                  <FieldLabel>Nội dung công việc</FieldLabel>
-                  <TextField
-                    value={task.content}
-                    onChange={(v) => updateFollowupTask(task.id, { content: v })}
-                    placeholder="Hỗ trợ người dùng khi dùng web ca trưởng."
-                  />
-                </div>
-                <div>
-                  <FieldLabel>Hạn hoàn thành</FieldLabel>
-                  <DateField
-                    value={task.due}
-                    onChange={(v) => updateFollowupTask(task.id, { due: v })}
-                  />
-                </div>
-                <div>
-                  <FieldLabel>Hỗ trợ</FieldLabel>
-                  <TextField
-                    value={task.support}
-                    onChange={(v) => updateFollowupTask(task.id, { support: v })}
-                    placeholder="-"
-                  />
-                </div>
-                <div>
-                  <FieldLabel>Trạng thái</FieldLabel>
-                  <StatusSelect
-                    value={task.status}
-                    onChange={(v) => updateFollowupTask(task.id, { status: v })}
-                  />
-                </div>
-                <div className="flex items-end justify-center sm:pt-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-800 text-base font-black text-white">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-base font-black text-slate-950">
+                        Công việc theo dõi {index + 1}
+                      </p>
+                      <p className="text-sm font-semibold text-slate-950">
+                        Nội dung công việc được ưu tiên hiển thị trên ảnh.
+                      </p>
+                    </div>
+                  </div>
                   <RemoveRowButton
                     onClick={() => removeFollowupTask(task.id)}
                     label="Xoá công việc theo dõi"
                   />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3 sm:col-span-2">
+                    <FieldLabel>Nội dung công việc</FieldLabel>
+                    <TextAreaField
+                      value={task.content}
+                      onChange={(v) => updateFollowupTask(task.id, { content: v })}
+                      placeholder="Mô tả rõ công việc cần theo dõi hoặc bổ sung."
+                      rows={3}
+                      className="min-h-[112px] border-emerald-400 bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <FieldLabel>Dự án / Hạng mục</FieldLabel>
+                    <TextField
+                      value={task.project}
+                      onChange={(v) => updateFollowupTask(task.id, { project: v })}
+                      placeholder="Hạt Dẻ Ông Lý"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Hạn hoàn thành</FieldLabel>
+                    <DateField
+                      value={task.due}
+                      onChange={(v) => updateFollowupTask(task.id, { due: v })}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Hỗ trợ</FieldLabel>
+                    <TextField
+                      value={task.support}
+                      onChange={(v) => updateFollowupTask(task.id, { support: v })}
+                      placeholder="-"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <FieldLabel>Trạng thái</FieldLabel>
+                    <StatusSelect
+                      value={task.status}
+                      onChange={(v) => updateFollowupTask(task.id, { status: v })}
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -1142,7 +1158,7 @@ const response = await fetch("/api/work-reports", {
 
         {/* ===== Trạng thái lưu / lỗi ===== */}
         {saveError ? (
-          <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600 ring-1 ring-rose-100">
+          <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700 ring-1 ring-red-200">
             {saveError}
           </div>
         ) : null}
@@ -1160,12 +1176,12 @@ const response = await fetch("/api/work-reports", {
         ) : null}
 
         {/* ===== Nút hành động ===== */}
-        <div className="flex justify-end gap-3 pb-6">
+        <div className="grid grid-cols-2 gap-2 px-1 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-1 sm:flex sm:justify-end sm:gap-3 sm:px-0 sm:pb-6 sm:pt-0">
           <button
             type="button"
             onClick={handleExportImage}
             disabled={isExporting}
-            className="flex h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-400 bg-white px-3 text-sm font-black text-slate-950 transition duration-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 active:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
           >
             {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
             {isExporting ? "Đang xuất ảnh..." : "Xuất ảnh (Zalo)"}
@@ -1174,7 +1190,7 @@ const response = await fetch("/api/work-reports", {
             type="button"
             onClick={handleSubmit}
             disabled={isSaving}
-            className="flex h-11 items-center gap-2 rounded-xl bg-gradient-to-br from-emerald-800 to-emerald-700 px-5 text-sm font-black text-white shadow-md shadow-emerald-800/25 transition hover:from-emerald-900 hover:to-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-emerald-800 to-emerald-700 px-3 text-sm font-black text-white shadow-md shadow-emerald-800/25 transition duration-200 hover:from-emerald-900 hover:to-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-950 focus-visible:ring-offset-2 active:from-emerald-950 active:to-emerald-900 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
           >
             {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {isSaving ? "Đang lưu..." : "Lưu báo cáo"}
@@ -1183,7 +1199,7 @@ const response = await fetch("/api/work-reports", {
 
         {/* ===== Card ẩn để xuất ảnh ===== */}
         <div className="pointer-events-none fixed -left-[9999px] top-0">
-          <ReportExportCard ref={exportCardRef} contentRef={exportContentRef} form={form} />
+          <ReportExportCard ref={exportCardRef} form={form} />
         </div>
       </div>
     </main>
